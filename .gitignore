@@ -1,0 +1,6 @@
+# SimpleDB database directories — generated at runtime by CreateStudentDB.
+# Add any other database folders here if you rename or create more.
+studentdb/
+
+# macOS Finder metadata (came with the original source drop)
+.DS_Store
