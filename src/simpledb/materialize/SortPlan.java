@@ -22,11 +22,26 @@ public class SortPlan implements Plan {
     * @param sortfields the fields to sort by
     * @param tx the calling transaction
     */
-   public SortPlan(Transaction tx, Plan p, List<String> sortfields) {
+   public SortPlan(Transaction tx, Plan p, List<SortField> sortFields) {
       this.tx = tx;
       this.p = p;
       sch = p.schema();
-      comp = new RecordComparator(sortfields);
+      comp = new RecordComparator(sortFields);
+   }
+   
+   /**
+    * A factory method for backward compatibility.
+    * All fields are sorted in the default ascending order.
+    * @param p the plan for the underlying query
+    * @param fldnames the fields to be sorted in asc order
+    * @param tx the calling transaction
+    */
+   public static SortPlan onFields(Transaction tx, Plan p, List<String> fldnames) {
+	   List<SortField> sortFields = new ArrayList<SortField>();
+	   for (String fldname : fldnames) {
+		   sortFields.add(new SortField(fldname, true));
+	   }
+	   return new SortPlan(tx, p, sortFields);
    }
    
    /**

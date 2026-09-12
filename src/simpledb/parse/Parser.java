@@ -2,6 +2,7 @@ package simpledb.parse;
 
 import java.util.*;
 
+
 import simpledb.query.*;
 import simpledb.record.*;
 
@@ -64,7 +65,15 @@ public class Parser {
          lex.eatKeyword("where");
          pred = predicate();
       }
-      return new QueryData(fields, tables, pred);
+      
+      // Lab3 - order by clause
+      List<SortField> sortfields = new ArrayList<SortField>();
+      if (lex.matchKeyword("order")) {
+    	  lex.eatKeyword("order");
+    	  lex.eatKeyword("by");
+    	  sortfields = this.sortList();
+      }
+      return new QueryData(fields, tables, pred, sortfields);
    }
    
    private List<String> selectList() {
@@ -75,6 +84,24 @@ public class Parser {
          L.addAll(selectList());
       }
       return L;
+   }
+   
+   private List<SortField> sortList() {
+	   String fieldName = field();
+	   boolean isAsc = true; // Default behaviour
+	   if (lex.matchKeyword("asc")) {
+		   lex.eatKeyword("asc");
+	   } else if (lex.matchKeyword("desc")) {
+		   lex.eatKeyword("desc");
+		   isAsc = false;
+	   }
+	   List<SortField> allSortFields = new ArrayList<SortField>();
+	   allSortFields.add(new SortField(fieldName, isAsc));
+	   if (lex.matchDelim(',')) {
+		   lex.eatDelim(',');
+		   allSortFields.addAll(sortList());
+	   }
+	   return allSortFields;
    }
    
    private Collection<String> tableList() {

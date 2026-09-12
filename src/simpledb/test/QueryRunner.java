@@ -35,6 +35,7 @@ public class QueryRunner {
          }
          catch (Exception e) {
             System.out.println("Error: " + e);
+            e.printStackTrace();
             tx.rollback();
          }
          System.out.print("SQL> ");
