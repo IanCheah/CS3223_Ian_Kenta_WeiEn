@@ -2,6 +2,7 @@ package simpledb.opt;
 
 import java.util.Map;
 
+
 import simpledb.tx.Transaction;
 import simpledb.record.*;
 import simpledb.query.*;
@@ -10,6 +11,7 @@ import simpledb.index.planner.*;
 import simpledb.multibuffer.MultibufferProductPlan;
 import simpledb.plan.*;
 import simpledb.materialize.MergeJoinPlan;
+
 
 /**
  * This class contains methods for planning a single table.
@@ -70,7 +72,7 @@ class TablePlanner {
       if (p == null)
     	  p = makeMergeSortJoin(current, currsch);
       if (p == null)
-         p = makeProductJoin(current, currsch);
+         p = makeNestedLoopsJoin(current, currsch);
       return p;
    }
    
@@ -97,7 +99,7 @@ class TablePlanner {
       return null;
    }
    
-   // New method added for lab4. Copied makeIndexJoin
+   // New method added for lab4 parta. Copied makeIndexJoin
    private Plan makeMergeSortJoin(Plan current, Schema currsch) {
 	   for (String fldname : this.myschema.fields()) {
 		   String outerfield = this.mypred.equatesWithField(fldname);
@@ -109,6 +111,16 @@ class TablePlanner {
 		   }
 	   }
 	   return null;
+   }
+   
+   // New method added for lab4 partc.
+   private Plan makeNestedLoopsJoin(Plan current, Schema currsch) {
+	   Predicate joinpred = this.mypred.joinSubPred(myschema, currsch);
+	   if (joinpred == null)
+		   return null;
+	   System.out.println("NLJ on " + joinpred);
+	   Plan p = addSelectPred(this.myplan);
+	   return new NestedLoopsJoinPlan(current, p, joinpred);
    }
    
    private Plan makeIndexJoin(Plan current, Schema currsch) {
