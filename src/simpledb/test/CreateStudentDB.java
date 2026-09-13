@@ -21,6 +21,11 @@ public class CreateStudentDB {
          s = "create index idx_major on STUDENT (MajorId) using hash";
          planner.executeUpdate(s, tx);
          System.out.println("Created index for STUDENT - (MajorId)");
+         
+         System.out.println("Creating index for STUDENT - (SId)");
+         s = "create index idx_sid on STUDENT (SId) using btree";
+         planner.executeUpdate(s, tx);
+         System.out.println("Created index for STUDENT - (SId)");
 
          s = "insert into STUDENT(SId, SName, MajorId, GradYear) values ";
          String[] studvals = {"(1, 'joe', 10, 2021)",

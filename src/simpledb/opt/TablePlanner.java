@@ -1,6 +1,7 @@
 package simpledb.opt;
 
 import java.util.Map;
+
 import simpledb.tx.Transaction;
 import simpledb.record.*;
 import simpledb.query.*;
@@ -8,6 +9,7 @@ import simpledb.metadata.*;
 import simpledb.index.planner.*;
 import simpledb.multibuffer.MultibufferProductPlan;
 import simpledb.plan.*;
+import simpledb.materialize.MergeJoinPlan;
 
 /**
  * This class contains methods for planning a single table.
@@ -66,6 +68,8 @@ class TablePlanner {
          return null;
       Plan p = makeIndexJoin(current, currsch);
       if (p == null)
+    	  p = makeMergeSortJoin(current, currsch);
+      if (p == null)
          p = makeProductJoin(current, currsch);
       return p;
    }
@@ -93,11 +97,27 @@ class TablePlanner {
       return null;
    }
    
+   // New method added for lab4. Copied makeIndexJoin
+   private Plan makeMergeSortJoin(Plan current, Schema currsch) {
+	   for (String fldname : this.myschema.fields()) {
+		   String outerfield = this.mypred.equatesWithField(fldname);
+		   if (outerfield != null && currsch.hasField(outerfield)) {
+			   System.out.println("Merge on " + fldname + " = " + outerfield);
+			   Plan p = new MergeJoinPlan(tx, current, myplan, outerfield, fldname);
+			   p = addSelectPred(p);
+			   return addJoinPred(p, currsch);
+		   }
+	   }
+	   return null;
+   }
+   
    private Plan makeIndexJoin(Plan current, Schema currsch) {
       for (String fldname : indexes.keySet()) {
+    	 System.out.println("fldname is: " + fldname);
          String outerfield = mypred.equatesWithField(fldname);
          if (outerfield != null && currsch.hasField(outerfield)) {
             IndexInfo ii = indexes.get(fldname);
+            System.out.println("INDEX JOIN on " + fldname + " = " + outerfield);
             Plan p = new IndexJoinPlan(current, myplan, ii, outerfield);
             p = addSelectPred(p);
             return addJoinPred(p, currsch);
@@ -107,6 +127,9 @@ class TablePlanner {
    }
    
    private Plan makeProductJoin(Plan current, Schema currsch) {
+	  System.out.println("PRODUCT JOIN");
+	  System.out.println("current: " + current);
+	  System.out.println("currsch: " + currsch);
       Plan p = makeProductPlan(current);
       return addJoinPred(p, currsch);
    }
