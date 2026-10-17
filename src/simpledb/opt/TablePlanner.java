@@ -11,6 +11,7 @@ import simpledb.index.planner.*;
 import simpledb.multibuffer.MultibufferProductPlan;
 import simpledb.plan.*;
 import simpledb.materialize.MergeJoinPlan;
+import simpledb.materialize.HashJoinPlan;
 
 
 /**
@@ -70,9 +71,12 @@ class TablePlanner {
          return null;
       Plan p = makeIndexJoin(current, currsch);
       if (p == null)
+    	  p = makeHashJoin(current, currsch);
+      if (p == null)
     	  p = makeMergeSortJoin(current, currsch);
       if (p == null)
          p = makeNestedLoopsJoin(current, currsch);
+    	 
       return p;
    }
    
@@ -106,6 +110,20 @@ class TablePlanner {
 		   if (outerfield != null && currsch.hasField(outerfield)) {
 			   System.out.println("Merge on " + fldname + " = " + outerfield);
 			   Plan p = new MergeJoinPlan(tx, current, myplan, outerfield, fldname);
+			   p = addSelectPred(p);
+			   return addJoinPred(p, currsch);
+		   }
+	   }
+	   return null;
+   }
+   
+   // New method added for lab5
+   private Plan makeHashJoin(Plan current, Schema currsch) {
+	   for (String fldname : this.myschema.fields()) {
+		   String outerfield = this.mypred.equatesWithField(fldname);
+		   if (outerfield != null && currsch.hasField(outerfield)) {
+			   System.out.println("Hash join on " + fldname + " = " + outerfield);
+			   Plan p = new HashJoinPlan(tx, current, myplan, outerfield, fldname);
 			   p = addSelectPred(p);
 			   return addJoinPred(p, currsch);
 		   }
