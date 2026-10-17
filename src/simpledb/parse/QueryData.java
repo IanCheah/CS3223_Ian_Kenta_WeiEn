@@ -2,7 +2,9 @@ package simpledb.parse;
 
 import java.util.*;
 
+
 import simpledb.query.*;
+import simpledb.materialize.AggregationFn;
 
 /**
  * Data for the SQL <i>select</i> statement.
@@ -14,15 +16,32 @@ public class QueryData {
 	private Collection<String> tables;
 	private Predicate pred;
 	private List<SortField> sortFields;
+	
+	// Fields for aggregate and Group By
+	private boolean isDistinct;
+	private List<String> groupFields;
+	private List<AggregationFn> aggFns;
 
 	/**
 	 * Saves the field and table list and predicate.
 	 */
-	public QueryData(List<String> fields, Collection<String> tables, Predicate pred, List<SortField> sortfields) {
+	public QueryData(
+			List<String> fields,
+			Collection<String> tables,
+			Predicate pred,
+			List<SortField> sortfields,
+			boolean isDistinct,
+			List<String> groupFields,
+			List<AggregationFn> aggFns) {
 		this.fields = fields;
 		this.tables = tables;
 		this.pred = pred;
 		this.sortFields = sortfields;
+		
+		// Populate new fields to support aggregate / group by
+		this.isDistinct = isDistinct;
+		this.groupFields = groupFields;
+		this.aggFns = aggFns;
 	}
 
 	/**
@@ -56,11 +75,28 @@ public class QueryData {
 	public List<SortField> sortFields() {
 		return this.sortFields;
 	}
+	
+	public boolean isDistinct() {
+		return this.isDistinct;
+	}
 
+	public List<String> groupFields() {
+		return this.groupFields;
+	}
+	
+	public List<AggregationFn> aggFns() {
+		return this.aggFns;
+	}
+	
 	public String toString() {
 		String result = "select ";
 		for (String fldname : fields)
 			result += fldname + ", ";
+		
+		if (this.isDistinct) {
+			result += "distinct ";
+		}
+		
 		result = result.substring(0, result.length() - 2); // remove final comma
 		result += " from ";
 		for (String tblname : tables)
@@ -69,6 +105,15 @@ public class QueryData {
 		String predstring = pred.toString();
 		if (!predstring.equals(""))
 			result += " where " + predstring;
+		
+		if (!groupFields.isEmpty()) {
+			result += " group by ";
+			for (String field : groupFields) {
+				result += field + ", ";
+			}
+			result = result.substring(0, result.length() - 2);
+		}
+		
 		if (!(this.sortFields.size() == 0)) {
 			result += " order by ";
 

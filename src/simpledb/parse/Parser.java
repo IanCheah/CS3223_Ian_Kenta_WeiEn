@@ -2,7 +2,7 @@ package simpledb.parse;
 
 import java.util.*;
 
-
+import simpledb.materialize.AggregationFn;
 import simpledb.query.*;
 import simpledb.record.*;
 
@@ -57,6 +57,15 @@ public class Parser {
    
    public QueryData query() {
       lex.eatKeyword("select");
+      
+      // Lab5 - Optional DISTINCT
+      boolean isDistinct = false;
+      if (lex.matchKeyword("distinct")) {
+    	  lex.eatKeyword("distinct");
+    	  isDistinct = true;
+//    	  System.out.println("Distinct is " + isDistinct);
+      }
+      
       List<String> fields = selectList();
       lex.eatKeyword("from");
       Collection<String> tables = tableList();
@@ -66,6 +75,17 @@ public class Parser {
          pred = predicate();
       }
       
+      // Lab5 - Optional GROUP BY
+      List<String> groupFields = new ArrayList<>();
+      if (lex.matchKeyword("group")) {
+    	  lex.eatKeyword("group");
+    	  lex.eatKeyword("by");
+    	  groupFields = this.fieldList();
+      }
+      
+      // Lab5 - Optional AggregationFns
+      List<AggregationFn> aggFns = new ArrayList<>();
+      
       // Lab3 - order by clause
       List<SortField> sortfields = new ArrayList<SortField>();
       if (lex.matchKeyword("order")) {
@@ -73,7 +93,22 @@ public class Parser {
     	  lex.eatKeyword("by");
     	  sortfields = this.sortList();
       }
-      return new QueryData(fields, tables, pred, sortfields);
+      
+      if (lex.matchDelim(';')) {
+    	  lex.eatDelim(';');
+      }
+      if (!lex.atEnd()) {
+    	  throw new BadSyntaxException();
+      }
+      
+      return new QueryData(
+    		  fields,
+    		  tables,
+    		  pred,
+    		  sortfields,
+    		  isDistinct,
+    		  groupFields,
+    		  aggFns);
    }
    
    private List<String> selectList() {

@@ -4,6 +4,9 @@ import java.util.*;
 
 import simpledb.tx.Transaction;
 import simpledb.materialize.SortPlan;
+import simpledb.materialize.GroupByPlan;
+import simpledb.materialize.AggregationFn;
+
 import simpledb.metadata.MetadataMgr;
 import simpledb.parse.QueryData;
 import simpledb.plan.*;
@@ -48,10 +51,20 @@ public class HeuristicQueryPlanner implements QueryPlanner {
             currentplan = getLowestProductPlan(currentplan);
       }
       
-      // Step 4.  Project on the field names and return
+      // Step 4: Group By
+      if (!data.groupFields().isEmpty() || !data.aggFns().isEmpty()) {
+    	  currentplan = new GroupByPlan(tx, currentplan, data.groupFields(), data.aggFns());
+      }
+      
+      // Step 5:  Project
       Plan p = new ProjectPlan(currentplan, data.fields());
       
-      // Step 5. Sort, if the query has an order by clause
+      // Step 6: Distinct
+      if (data.isDistinct()) {
+    	  p = new GroupByPlan(tx, p, data.fields(), new ArrayList<AggregationFn>());
+      }
+      
+      // Step 7: Order By
       if (!data.sortFields().isEmpty()) {
     	  p = new SortPlan(tx, p, data.sortFields());
       }

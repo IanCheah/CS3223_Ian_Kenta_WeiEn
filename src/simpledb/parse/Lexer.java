@@ -204,6 +204,11 @@ public class Lexer {
       keywords = Arrays.asList("select", "from", "where", "and",
                                "insert", "into", "values", "delete", "update", "set", 
                                "create", "table", "int", "varchar", "view", "as", "index", "on",
-                               "using", "order", "by", "asc", "desc");
+                               "using", "order", "by", "asc", "desc",
+                               "distinct", "group", "sum", "count", "avg", "min", "max");
+   }
+   
+   public boolean atEnd() {
+	   return this.tok.ttype == StreamTokenizer.TT_EOF;
    }
 }
