@@ -104,8 +104,10 @@ public class SortPlan implements Plan {
    private List<TempTable> splitIntoRuns(Scan src) {
       List<TempTable> temps = new ArrayList<>();
       src.beforeFirst();
-      if (!src.next())
+      if (!src.next()) {
+    	 temps.add(new TempTable(tx, sch));
          return temps;
+      }
       TempTable currenttemp = new TempTable(tx, sch);
       temps.add(currenttemp);
       UpdateScan currentscan = currenttemp.open();
