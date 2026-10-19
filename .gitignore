@@ -4,3 +4,6 @@ studentdb/
 
 # macOS Finder metadata (came with the original source drop)
 .DS_Store
+
+bin/
+*.class

@@ -12,7 +12,9 @@ import java.util.*;
  * @author Edward Sciore
  */
 public class MergeJoinPlan implements Plan {
+   private Transaction tx;
    private Plan p1, p2;
+   private Plan unsorted1, unsorted2;
    private String fldname1, fldname2;
    private Schema sch = new Schema();
    
@@ -27,6 +29,9 @@ public class MergeJoinPlan implements Plan {
     * @param tx the calling transaction
     */
    public MergeJoinPlan(Transaction tx, Plan p1, Plan p2, String fldname1, String fldname2) {
+      this.tx = tx;
+      this.unsorted1 = p1;
+      this.unsorted2 = p2;
       this.fldname1 = fldname1;
       List<String> sortlist1 = Arrays.asList(fldname1);
       this.p1 = SortPlan.onFields(tx, p1, sortlist1);
@@ -51,18 +56,28 @@ public class MergeJoinPlan implements Plan {
    }
    
    /**
-    * Return the number of block acceses required to
-    * mergejoin the sorted tables.
-    * Since a mergejoin can be preformed with a single
-    * pass through each table, the method returns
-    * the sum of the block accesses of the 
-    * materialized sorted tables.
-    * It does <i>not</i> include the one-time cost
-    * of materializing and sorting the records.
+    * Return the number of block accesses required to
+    * sort both inputs and then mergejoin them.
+    * Cost = sortCost(M) + sortCost(N) + (M + N),
+    * where M and N are the costs of the two inputs
+    * (same as HashJoinPlan and NestedLoopsJoinPlan).
     * @see simpledb.plan.Plan#blocksAccessed()
     */
    public int blocksAccessed() {
-      return p1.blocksAccessed() + p2.blocksAccessed();
+      int M = unsorted1.blocksAccessed();
+      int N = unsorted2.blocksAccessed();
+      return sortCost(M) + sortCost(N) + M + N;
+   }
+   
+   // External merge sort cost from lecture:
+   // 2N * (1 + ceil(log_{B-1}(ceil(N/B))))
+   private int sortCost(int N) {
+      if (N == 0)
+         return 0;
+      int B = Math.max(3, tx.availableBuffs());
+      double numRuns = Math.ceil((double) N / B);
+      int numPasses = 1 + (int) Math.ceil(Math.log(numRuns) / Math.log(B - 1));
+      return 2 * N * numPasses;
    }
    
    /**

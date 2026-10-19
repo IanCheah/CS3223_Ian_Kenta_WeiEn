@@ -14,6 +14,7 @@ import simpledb.plan.Plan;
 public class MultibufferProductPlan implements Plan {
    private Transaction tx;
    private Plan lhs, rhs;
+   private Plan unmaterializedLhs;
    private Schema schema = new Schema();
 
    /**
@@ -24,6 +25,7 @@ public class MultibufferProductPlan implements Plan {
     */
    public MultibufferProductPlan(Transaction tx, Plan lhs, Plan rhs) {
       this.tx = tx;
+      this.unmaterializedLhs = lhs;
       this.lhs = new MaterializePlan(tx, lhs);
       this.rhs = rhs;
       schema.addAll(lhs.schema());
@@ -61,8 +63,11 @@ public class MultibufferProductPlan implements Plan {
       // this guesses at the # of chunks
       int avail = tx.availableBuffs();
       int size = new MaterializePlan(tx, rhs).blocksAccessed();
-      int numchunks = size / avail;
-      return rhs.blocksAccessed() +
+      // round up, otherwise a small table gives 0 chunks and the product looks free
+      int numchunks = (int) Math.ceil((double) size / Math.max(1, avail));
+      // the LHS has to be computed once to materialize it
+      // (e.g. if it is another join), then the temp table is rescanned per chunk
+      return unmaterializedLhs.blocksAccessed() + rhs.blocksAccessed() +
             (lhs.blocksAccessed() * numchunks);
    }
 

@@ -1,5 +1,6 @@
 package simpledb.opt;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 
@@ -19,6 +20,8 @@ import simpledb.materialize.HashJoinPlan;
  * @author Edward Sciore
  */
 class TablePlanner {
+   private String tblname;
+   private String lastjoin; // name of the join picked by the last makeJoinPlan call
    private TablePlan myplan;
    private Predicate mypred;
    private Schema myschema;
@@ -38,6 +41,7 @@ class TablePlanner {
    public TablePlanner(String tblname, Predicate mypred, Transaction tx, MetadataMgr mdm) {
       this.mypred  = mypred;
       this.tx  = tx;
+      this.tblname = tblname;
       myplan   = new TablePlan(tx, tblname, mdm);
       myschema = myplan.schema();
       indexes  = mdm.getIndexInfo(tblname, tx);
@@ -55,11 +59,19 @@ class TablePlanner {
       return addSelectPred(p);
    }
    
+   public String tableName() {
+      return tblname;
+   }
+   
+   public String lastJoin() {
+      return lastjoin;
+   }
+   
    /**
     * Constructs a join plan of the specified plan
-    * and the table.  The plan will use an indexjoin, if possible.
-    * (Which means that if an indexselect is also possible,
-    * the indexjoin operator takes precedence.)
+    * and the table.  Every join algorithm that applies
+    * is built, and the one with the lowest estimated
+    * cost (blocks accessed) is returned.
     * The method returns null if no join is possible.
     * @param current the specified plan
     * @return a join plan of the plan and this table
@@ -69,15 +81,38 @@ class TablePlanner {
       Predicate joinpred = mypred.joinSubPred(myschema, currsch);
       if (joinpred == null)
          return null;
-      Plan p = makeIndexJoin(current, currsch);
-      if (p == null)
-    	  p = makeHashJoin(current, currsch);
-      if (p == null)
-    	  p = makeMergeSortJoin(current, currsch);
-      if (p == null)
-         p = makeNestedLoopsJoin(current, currsch);
-    	 
-      return p;
+      
+      // Lab 7: build all candidate joins (null if not applicable)
+      Map<String,Plan> candidates = new LinkedHashMap<>();
+      candidates.put("index join", makeIndexJoin(current, currsch));
+      candidates.put("hash join", makeHashJoin(current, currsch));
+      candidates.put("sort-merge join", makeMergeSortJoin(current, currsch));
+      candidates.put("nested loops join", makeNestedLoopsJoin(current, currsch));
+      
+      // Pick the cheapest one
+      String bestname = null;
+      Plan bestplan = null;
+      for (String name : candidates.keySet()) {
+         Plan p = candidates.get(name);
+         if (p == null)
+            continue;
+         if (bestplan == null || cost(p) < cost(bestplan)) {
+            bestname = name;
+            bestplan = p;
+         }
+      }
+      lastjoin = bestname;
+      return bestplan;
+   }
+   
+   /**
+    * The estimated cost of a plan, in blocks accessed.
+    * Very bad plans can overflow an int and turn negative,
+    * so treat those as the most expensive.
+    */
+   static int cost(Plan p) {
+      int c = p.blocksAccessed();
+      return c < 0 ? Integer.MAX_VALUE : c;
    }
    
    /**
@@ -108,7 +143,6 @@ class TablePlanner {
 	   for (String fldname : this.myschema.fields()) {
 		   String outerfield = this.mypred.equatesWithField(fldname);
 		   if (outerfield != null && currsch.hasField(outerfield)) {
-			   System.out.println("Merge on " + fldname + " = " + outerfield);
 			   Plan p = new MergeJoinPlan(tx, current, myplan, outerfield, fldname);
 			   p = addSelectPred(p);
 			   return addJoinPred(p, currsch);
@@ -122,7 +156,6 @@ class TablePlanner {
 	   for (String fldname : this.myschema.fields()) {
 		   String outerfield = this.mypred.equatesWithField(fldname);
 		   if (outerfield != null && currsch.hasField(outerfield)) {
-			   System.out.println("Hash join on " + fldname + " = " + outerfield);
 			   Plan p = new HashJoinPlan(tx, current, myplan, outerfield, fldname);
 			   p = addSelectPred(p);
 			   return addJoinPred(p, currsch);
@@ -136,18 +169,15 @@ class TablePlanner {
 	   Predicate joinpred = this.mypred.joinSubPred(myschema, currsch);
 	   if (joinpred == null)
 		   return null;
-	   System.out.println("NLJ on " + joinpred);
 	   Plan p = addSelectPred(this.myplan);
 	   return new NestedLoopsJoinPlan(current, p, joinpred);
    }
    
    private Plan makeIndexJoin(Plan current, Schema currsch) {
       for (String fldname : indexes.keySet()) {
-    	 System.out.println("fldname is: " + fldname);
          String outerfield = mypred.equatesWithField(fldname);
          if (outerfield != null && currsch.hasField(outerfield)) {
             IndexInfo ii = indexes.get(fldname);
-            System.out.println("INDEX JOIN on " + fldname + " = " + outerfield);
             Plan p = new IndexJoinPlan(current, myplan, ii, outerfield);
             p = addSelectPred(p);
             return addJoinPred(p, currsch);

@@ -67,7 +67,8 @@ public class IndexInfo {
     */
    public int blocksAccessed() {
       int rpb = tx.blockSize() / idxLayout.slotSize();
-      int numblocks = si.recordsOutput() / rpb;
+      // at least 1 block, otherwise log(0) in BTreeIndex.searchCost breaks the cost
+      int numblocks = Math.max(1, si.recordsOutput() / rpb);
       if (this.indexType.equals("btree")) {
     	  return BTreeIndex.searchCost(numblocks, rpb);
       } else {
