@@ -29,9 +29,12 @@ public class HashJoinPlan implements Plan {
 	}
 	
 	public Scan open() {
+		// Open the input first: if it is another join, it pins buffers
+		// when opened, so only count what is left afterwards
+		Scan rScan = this.r.open();
 		// Correspond to k in lecture notes
 		int partitionNum = Math.max(1, tx.availableBuffs() - 1);
-		List<TempTable> rPartitions = partition(this.r.open(), this.r.schema(), this.field1, partitionNum, 0);
+		List<TempTable> rPartitions = partition(rScan, this.r.schema(), this.field1, partitionNum, 0);
 		List<TempTable> sPartitions = partition(this.s.open(), this.s.schema(), this.field2, partitionNum, 0);
 		
 		// Recursive logic (see recursivePartition)
@@ -112,7 +115,6 @@ public class HashJoinPlan implements Plan {
 			for (String fieldName : schema.fields()) {
 				targetTable.setVal(fieldName, cursor.getVal(fieldName));
 			}
-			System.out.println("fieldVal is mapped to idx " + idx);
 		}
 		
 		// Close all the tables that we opened
@@ -120,7 +122,6 @@ public class HashJoinPlan implements Plan {
 			t.close();
 		}
 		cursor.close();
-		System.out.println("DEBUG" + result.toString());
 		return result;
 	}
 	

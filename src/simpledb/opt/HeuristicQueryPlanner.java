@@ -13,106 +13,121 @@ import simpledb.plan.*;
 
 /**
  * A query planner that optimizes using a heuristic-based algorithm.
+ * Lab 7: Every left-deep join order is tried. For each order, every
+ * join is the cheapest algorithm for that step (see TablePlanner).
+ * The order with the lowest total cost (blocks accessed) wins.
+ * Trying every order is n!, which is fine for the few tables
+ * a query usually has.
  * @author Edward Sciore
  */
 public class HeuristicQueryPlanner implements QueryPlanner {
-   private Collection<TablePlanner> tableplanners = new ArrayList<>();
    private MetadataMgr mdm;
-   
+   private Plan bestplan;
+   private String bestorder;
+   private String bestjoins;
+   private String joins; // joins used by the plan makeLeftDeepPlan just built
+
    public HeuristicQueryPlanner(MetadataMgr mdm) {
       this.mdm = mdm;
    }
-   
-   /**
-    * Creates an optimized left-deep query plan using the following
-    * heuristics.
-    * H1. Choose the smallest table (considering selection predicates)
-    * to be first in the join order.
-    * H2. Add the table to the join order which
-    * results in the smallest output.
-    */
+
    public Plan createPlan(QueryData data, Transaction tx) {
-      
+
       // Step 1:  Create a TablePlanner object for each mentioned table
+      List<TablePlanner> tableplanners = new ArrayList<>();
       for (String tblname : data.tables()) {
          TablePlanner tp = new TablePlanner(tblname, data.pred(), tx, mdm);
          tableplanners.add(tp);
       }
-      
-      // Step 2:  Choose the lowest-size plan to begin the join order
-      Plan currentplan = getLowestSelectPlan();
-      
-      // Step 3:  Repeatedly add a plan to the join order
-      while (!tableplanners.isEmpty()) {
-         Plan p = getLowestJoinPlan(currentplan);
-         if (p != null)
-            currentplan = p;
-         else  // no applicable join
-            currentplan = getLowestProductPlan(currentplan);
-      }
-      
-      // Step 4: Group By
+
+      // Step 2:  Try every join order and keep the cheapest
+      bestplan = null;
+      bestorder = null;
+      bestjoins = null;
+      tryAllOrders(tableplanners, new ArrayList<>());
+      System.out.println("Best join order: " + bestorder + ", cost = " + TablePlanner.cost(bestplan));
+      System.out.println("Joins used: " + bestjoins);
+      Plan currentplan = bestplan;
+
+      // Step 3: Group By
       if (!data.groupFields().isEmpty() || !data.aggFns().isEmpty()) {
     	  currentplan = new GroupByPlan(tx, currentplan, data.groupFields(), data.aggFns());
       }
-      
-      // Step 5:  Project
+
+      // Step 4:  Project
       Plan p = new ProjectPlan(currentplan, data.fields());
-      
-      // Step 6: Distinct
+
+      // Step 5: Distinct
       if (data.isDistinct()) {
     	  p = new GroupByPlan(tx, p, data.fields(), new ArrayList<AggregationFn>());
       }
-      
-      // Step 7: Order By
+
+      // Step 6: Order By
       if (!data.sortFields().isEmpty()) {
     	  p = new SortPlan(tx, p, data.sortFields());
       }
-      
+
       return p;
    }
-   
-   private Plan getLowestSelectPlan() {
-      TablePlanner besttp = null;
-      Plan bestplan = null;
-      for (TablePlanner tp : tableplanners) {
-         Plan plan = tp.makeSelectPlan();
-         if (bestplan == null || plan.recordsOutput() < bestplan.recordsOutput()) {
-            besttp = tp;
-            bestplan = plan;
+
+   /**
+    * Recursively builds every permutation of the tables.
+    * Each complete permutation is turned into a plan and
+    * compared against the best plan so far.
+    */
+   private void tryAllOrders(List<TablePlanner> remaining, List<TablePlanner> order) {
+      if (remaining.isEmpty()) {
+         Plan p = makeLeftDeepPlan(order);
+         String orderstr = orderToString(order);
+         if (bestplan == null || TablePlanner.cost(p) < TablePlanner.cost(bestplan)) {
+            bestplan = p;
+            bestorder = orderstr;
+            bestjoins = joins;
          }
+         return;
       }
-      tableplanners.remove(besttp);
-      return bestplan;
+      for (int i = 0; i < remaining.size(); i++) {
+         TablePlanner tp = remaining.remove(i);
+         order.add(tp);
+         tryAllOrders(remaining, order);
+         order.remove(order.size() - 1);
+         remaining.add(i, tp);
+      }
    }
-   
-   private Plan getLowestJoinPlan(Plan current) {
-      TablePlanner besttp = null;
-      Plan bestplan = null;
-      for (TablePlanner tp : tableplanners) {
-         Plan plan = tp.makeJoinPlan(current);
-         if (plan != null && (bestplan == null || plan.recordsOutput() < bestplan.recordsOutput())) {
-            besttp = tp;
-            bestplan = plan;
+
+   /**
+    * Joins the tables from left to right in the given order.
+    * If a table has no join predicate with the tables so far,
+    * a product is used instead.
+    */
+   private Plan makeLeftDeepPlan(List<TablePlanner> order) {
+      Plan current = order.get(0).makeSelectPlan();
+      List<String> used = new ArrayList<>();
+      int prevcost = TablePlanner.cost(current);
+      used.add("scan " + order.get(0).tableName() + " (cost = " + prevcost + ")");
+      for (int i = 1; i < order.size(); i++) {
+         TablePlanner tp = order.get(i);
+         Plan p = tp.makeJoinPlan(current);
+         String name = tp.lastJoin();
+         if (p == null) {
+            p = tp.makeProductPlan(current);
+            name = "product";
          }
+         current = p;
+         // cost(p) includes everything below it, so subtract to get this join's own cost
+         int stepcost = TablePlanner.cost(p) - prevcost;
+         prevcost = TablePlanner.cost(p);
+         used.add(name + " with " + tp.tableName() + " (cost = " + stepcost + ")");
       }
-      if (bestplan != null)
-         tableplanners.remove(besttp);
-      return bestplan;
+      joins = String.join(", ", used);
+      return current;
    }
-   
-   private Plan getLowestProductPlan(Plan current) {
-      TablePlanner besttp = null;
-      Plan bestplan = null;
-      for (TablePlanner tp : tableplanners) {
-         Plan plan = tp.makeProductPlan(current);
-         if (bestplan == null || plan.recordsOutput() < bestplan.recordsOutput()) {
-            besttp = tp;
-            bestplan = plan;
-         }
-      }
-      tableplanners.remove(besttp);
-      return bestplan;
+
+   private String orderToString(List<TablePlanner> order) {
+      List<String> names = new ArrayList<>();
+      for (TablePlanner tp : order)
+         names.add(tp.tableName());
+      return names.toString();
    }
 
    public void setPlanner(Planner p) {
