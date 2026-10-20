@@ -1,5 +1,7 @@
 package simpledb.index.planner;
 
+import java.util.Arrays;
+import java.util.List;
 import simpledb.record.*;
 import simpledb.query.*;
 import simpledb.metadata.IndexInfo;
@@ -68,6 +70,14 @@ public class IndexSelectPlan implements Plan {
    public int distinctValues(String fldname) {
       return ii.distinctValues(fldname);
    }
+
+   public Constant minValue(String fldname) {
+      return p.minValue(fldname);
+   }
+
+   public Constant maxValue(String fldname) {
+      return p.maxValue(fldname);
+   }
    
    /**
     * Returns the schema of the data table.
@@ -75,5 +85,14 @@ public class IndexSelectPlan implements Plan {
     */
    public Schema schema() {
       return p.schema(); 
+   }
+
+   public String describe(List<String> inputs) {
+      return "Index Select: fetch rows of " + inputs.get(0) + " where " + ii.fieldName() + " = "
+            + new Expression(val) + " using the " + ii.indexType() + " index";
+   }
+
+   public List<Plan> children() {
+      return Arrays.asList(p);
    }
 }

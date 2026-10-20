@@ -48,19 +48,58 @@ public class Predicate {
       return true;
    }
 
-   /** 
-    * Calculate the extent to which selecting on the predicate 
-    * reduces the number of records output by a query.
-    * For example if the reduction factor is 2, then the
-    * predicate cuts the size of the output in half.
+   /**
+    * Calculate the fraction of records that satisfy the predicate.
+    * Terms are assumed independent (as in lecture), so their
+    * selectivities are multiplied.
+    * A fraction, not an integer reduction factor, so that e.g. a term
+    * keeping 2/3 of the records is not rounded to 1/2.
     * @param p the query's plan
-    * @return the integer reduction factor.
-    */ 
-   public int reductionFactor(Plan p) {
-      int factor = 1;
+    * @return the selectivity, between 0 and 1
+    */
+   public double selectivity(Plan p) {
+      double sel = 1.0;
       for (Term t : terms)
-         factor *= t.reductionFactor(p);
-      return factor;
+         sel *= t.selectivity(p);
+      return sel;
+   }
+
+   /**
+    * Return this predicate without the term "F=c",
+    * e.g. the term that an index select already enforces.
+    * @param fldname the field
+    * @param val the constant
+    * @return the remaining terms, or null if there are none
+    */
+   public Predicate withoutConstant(String fldname, Constant val) {
+      Predicate result = new Predicate();
+      for (Term t : terms) {
+         Constant c = t.equatesWithConstant(fldname);
+         if (c == null || !c.equals(val))
+            result.terms.add(t);
+      }
+      if (result.terms.size() == 0)
+         return null;
+      else
+         return result;
+   }
+
+   /**
+    * Return this predicate without the term "F1=F2",
+    * e.g. the term that a join algorithm already enforces.
+    * @param fldname1 the first field
+    * @param fldname2 the second field
+    * @return the remaining terms, or null if there are none
+    */
+   public Predicate withoutEquality(String fldname1, String fldname2) {
+      Predicate result = new Predicate();
+      for (Term t : terms)
+         if (!fldname2.equals(t.equatesWithField(fldname1)))
+            result.terms.add(t);
+      if (result.terms.size() == 0)
+         return null;
+      else
+         return result;
    }
 
    /**

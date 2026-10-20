@@ -3,6 +3,7 @@ package simpledb.metadata;
 import java.util.*;
 import simpledb.tx.Transaction;
 import simpledb.record.*;
+import simpledb.query.Constant;
 
 /**
  * The statistics manager is responsible for
@@ -15,6 +16,7 @@ import simpledb.record.*;
 class StatMgr {
    private TableMgr tblMgr;
    private Map<String,StatInfo> tablestats;
+   private Map<String,Integer> filesizes; // file size (blocks) when the stats were taken
    private int numcalls;
    
    /**
@@ -41,6 +43,10 @@ class StatMgr {
       if (numcalls > 100)
          refreshStatistics(tx);
       StatInfo si = tablestats.get(tblname);
+      // the table grew or shrank since the stats were taken, so they are stale
+      Integer filesize = filesizes.get(tblname);
+      if (si != null && (filesize == null || filesize != tx.size(tblname + ".tbl")))
+         si = null;
       if (si == null) {
          si = calcTableStats(tblname, layout, tx);
          tablestats.put(tblname, si);
@@ -50,6 +56,7 @@ class StatMgr {
    
    private synchronized void refreshStatistics(Transaction tx) {
       tablestats = new HashMap<String,StatInfo>();
+      filesizes = new HashMap<String,Integer>();
       numcalls = 0;
       Layout tcatlayout = tblMgr.getLayout("tblcat", tx);
       TableScan tcat = new TableScan(tx, "tblcat", tcatlayout);
@@ -62,16 +69,34 @@ class StatMgr {
       tcat.close();
    }
    
-   private synchronized StatInfo calcTableStats(String tblname, 
+   private synchronized StatInfo calcTableStats(String tblname,
                               Layout layout, Transaction tx) {
       int numRecs = 0;
       int numblocks = 0;
+      List<String> fields = layout.schema().fields();
+      Map<String,Set<Constant>> values = new HashMap<>();
+      Map<String,Constant> low = new HashMap<>();
+      Map<String,Constant> high = new HashMap<>();
+      for (String fldname : fields)
+         values.put(fldname, new HashSet<>());
       TableScan ts = new TableScan(tx, tblname, layout);
       while (ts.next()) {
          numRecs++;
          numblocks = ts.getRid().blockNumber() + 1;
+         for (String fldname : fields) {
+            Constant val = ts.getVal(fldname);
+            values.get(fldname).add(val);
+            if (!low.containsKey(fldname) || val.compareTo(low.get(fldname)) < 0)
+               low.put(fldname, val);
+            if (!high.containsKey(fldname) || val.compareTo(high.get(fldname)) > 0)
+               high.put(fldname, val);
+         }
       }
       ts.close();
-      return new StatInfo(numblocks, numRecs);
+      Map<String,Integer> distinct = new HashMap<>();
+      for (String fldname : fields)
+         distinct.put(fldname, values.get(fldname).size());
+      filesizes.put(tblname, tx.size(tblname + ".tbl"));
+      return new StatInfo(numblocks, numRecs, distinct, low, high);
    }
 }

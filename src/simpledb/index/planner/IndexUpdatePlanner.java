@@ -25,6 +25,9 @@ public class IndexUpdatePlanner implements UpdatePlanner {
 	public int executeInsert(InsertData data, Transaction tx) {
 		String tblname = data.tableName();
 		Plan p = new TablePlan(tx, tblname, mdm);
+		// get the indexes before inserting: this reads the table's stats,
+		// which must not see the new record while its fields are still empty
+		Map<String, IndexInfo> indexes = mdm.getIndexInfo(tblname, tx);
 
 		// first, insert the record
 		UpdateScan s = (UpdateScan) p.open();
@@ -32,7 +35,6 @@ public class IndexUpdatePlanner implements UpdatePlanner {
 		RID rid = s.getRid();
 
 		// then modify each field, inserting an index record if appropriate
-		Map<String, IndexInfo> indexes = mdm.getIndexInfo(tblname, tx);
 		Iterator<Constant> valIter = data.vals().iterator();
 		for (String fldname : data.fields()) {
 			Constant val = valIter.next();

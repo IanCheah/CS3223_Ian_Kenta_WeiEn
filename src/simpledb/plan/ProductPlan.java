@@ -1,5 +1,7 @@
 package simpledb.plan;
 
+import java.util.Arrays;
+import java.util.List;
 import simpledb.query.ProductScan;
 import simpledb.query.Scan;
 import simpledb.record.Schema;
@@ -75,5 +77,13 @@ public class ProductPlan implements Plan {
     */
    public Schema schema() {
       return schema;
+   }
+
+   public String describe(List<String> inputs) {
+      return "Product: combine every row of " + inputs.get(0) + " with every row of " + inputs.get(1);
+   }
+
+   public List<Plan> children() {
+      return Arrays.asList(p1, p2);
    }
 }
