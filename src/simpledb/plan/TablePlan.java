@@ -1,7 +1,9 @@
 package simpledb.plan;
 
+import java.util.List;
 import simpledb.tx.Transaction;
 import simpledb.metadata.*;
+import simpledb.query.Constant;
 import simpledb.query.Scan;
 import simpledb.record.*;
 
@@ -61,6 +63,14 @@ public class TablePlan implements Plan {
    public int distinctValues(String fldname) {
       return si.distinctValues(fldname);
    }
+
+   public Constant minValue(String fldname) {
+      return si.minValue(fldname);
+   }
+
+   public Constant maxValue(String fldname) {
+      return si.maxValue(fldname);
+   }
    
    /**
     * Determines the schema of the table,
@@ -69,5 +79,9 @@ public class TablePlan implements Plan {
     */
    public Schema schema() {
       return layout.schema();
+   }
+
+   public String describe(List<String> inputs) {
+      return tblname;
    }
 }

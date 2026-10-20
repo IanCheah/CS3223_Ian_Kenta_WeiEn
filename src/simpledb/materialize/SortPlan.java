@@ -4,6 +4,7 @@ import java.util.*;
 import simpledb.tx.Transaction;
 import simpledb.record.*;
 import simpledb.plan.Plan;
+import simpledb.plan.PlanPrinter;
 import simpledb.query.*;
 
 /**
@@ -15,6 +16,7 @@ public class SortPlan implements Plan {
    private Plan p;
    private Schema sch;
    private RecordComparator comp;
+   private List<SortField> sortFields;
    
    /**
     * Create a sort plan for the specified query.
@@ -27,6 +29,7 @@ public class SortPlan implements Plan {
       this.p = p;
       sch = p.schema();
       comp = new RecordComparator(sortFields);
+      this.sortFields = sortFields;
    }
    
    /**
@@ -68,9 +71,25 @@ public class SortPlan implements Plan {
     * @see simpledb.plan.Plan#blocksAccessed()
     */
    public int blocksAccessed() {
-      // does not include the one-time cost of sorting
-      Plan mp = new MaterializePlan(tx, p); // not opened; just for analysis
-      return mp.blocksAccessed();
+      // reading the input (at its own cost, since it is pipelined into
+      // the first pass), plus sorting the M pages it outputs
+      long C = p.blocksAccessed();
+      int M = new MaterializePlan(tx, p).blocksAccessed(); // not opened; just for analysis
+      return (int) Math.min(Integer.MAX_VALUE, C + sortCost(tx, M));
+   }
+
+   /**
+    * External merge sort cost from lecture, for N pages:
+    * 2N * (1 + ceil(log_{B-1}(ceil(N/B))))
+    * where B is the number of available buffers.
+    */
+   public static long sortCost(Transaction tx, int N) {
+      if (N == 0)
+         return 0;
+      int B = Math.max(3, tx.availableBuffs());
+      double numRuns = Math.ceil((double) N / B);
+      int numPasses = 1 + (int) Math.ceil(Math.log(numRuns) / Math.log(B - 1));
+      return 2L * N * numPasses;
    }
    
    /**
@@ -166,5 +185,16 @@ public class SortPlan implements Plan {
       for (String fldname : sch.fields())
          dest.setVal(fldname, src.getVal(fldname));
       return src.next();
+   }
+
+   public String describe(List<String> inputs) {
+      List<String> fields = new ArrayList<>();
+      for (SortField sf : sortFields)
+         fields.add(sf.getFieldName() + (sf.isAscending() ? " ascending" : " descending"));
+      return "Sort: sort " + inputs.get(0) + " by " + PlanPrinter.list(fields);
+   }
+
+   public List<Plan> children() {
+      return Arrays.asList(p);
    }
 }

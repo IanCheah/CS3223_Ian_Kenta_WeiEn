@@ -1,5 +1,7 @@
 package simpledb.plan;
 
+import java.util.Arrays;
+import java.util.List;
 import simpledb.query.ProductScan;
 import simpledb.query.Scan;
 import simpledb.record.Schema;
@@ -26,15 +28,29 @@ public class NestedLoopsJoinPlan implements Plan {
    }
    
    public int blocksAccessed() {
-	  return p1.blocksAccessed() + (p1.recordsOutput() * p2.blocksAccessed());
+	  // the scan is tuple-at-a-time: the inner is rescanned for every outer record
+	  long cost = p1.blocksAccessed() + ((long) p1.recordsOutput() * p2.blocksAccessed());
+	  return (int) Math.min(Integer.MAX_VALUE, cost);
    }
-   
-   // This is just an estimate 
+
+   // This is just an estimate.
+   // The selectivity uses the inputs' V values (lecture: 1/max(V1, V2)),
+   // not this plan's own, since those depend on recordsOutput.
    public int recordsOutput() {
-      return (p1.recordsOutput() * p2.recordsOutput()) / joinpred.reductionFactor(this);
+      double recs = (double) p1.recordsOutput() * p2.recordsOutput() * joinpred.selectivity(new ProductPlan(p1, p2));
+      return (int) Math.min(Integer.MAX_VALUE, Math.round(recs));
    }
 	   
    public int distinctValues(String fldname) {
+      // lecture (opt slides 65-66): V(U,A) = min(V(R1,A), V(R2,A)) for the
+      // join column A, and V(U,B) = min(||U||, V(R1,B)) for any other column B
+      String other = joinpred.equatesWithField(fldname);
+      if (other != null)
+         return Math.max(1, Math.min(inputDistinctValues(fldname), inputDistinctValues(other)));
+      return Math.max(1, Math.min(recordsOutput(), inputDistinctValues(fldname)));
+   }
+
+   private int inputDistinctValues(String fldname) {
       if (p1.schema().hasField(fldname))
          return p1.distinctValues(fldname);
       else
@@ -44,5 +60,12 @@ public class NestedLoopsJoinPlan implements Plan {
    public Schema schema() {
       return schema;
    }
-	      
+
+   public String describe(List<String> inputs) {
+      return "Nested-Loops Join: join " + inputs.get(0) + " and " + inputs.get(1) + " on " + joinpred;
+   }
+
+   public List<Plan> children() {
+      return Arrays.asList(p1, p2);
+   }
 }

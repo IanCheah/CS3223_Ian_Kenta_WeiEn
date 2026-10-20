@@ -68,6 +68,9 @@ public class Expression {
    }
    
    public String toString() {
-      return (val != null) ? val.toString() : fldname;
+      if (val == null)
+         return fldname;
+      // quote strings, so the text reads (and parses) as SQL: sname = 'joe'
+      return (val.asString() != null) ? "'" + val.asString() + "'" : val.toString();
    }
 }

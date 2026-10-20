@@ -43,6 +43,20 @@ public class IndexInfo {
    }
    
    /**
+    * Return the name of the indexed field.
+    */
+   public String fieldName() {
+      return fldname;
+   }
+
+   /**
+    * Return the index type ("hash" or "btree").
+    */
+   public String indexType() {
+      return indexType;
+   }
+
+   /**
     * Open the index described by this object.
     * @return the Index object associated with this information
     */
@@ -93,7 +107,7 @@ public class IndexInfo {
     * @param fname the specified field
     */
    public int distinctValues(String fname) {
-      return fldname.equals(fname) ? 1 : si.distinctValues(fldname);
+      return fldname.equals(fname) ? 1 : si.distinctValues(fname);
    }
    
    /**

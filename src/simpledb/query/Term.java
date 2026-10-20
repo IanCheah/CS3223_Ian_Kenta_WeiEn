@@ -61,43 +61,120 @@ public class Term {
    }
    
    /**
-    * Calculate the extent to which selecting on the term reduces 
-    * the number of records output by a query.
-    * For example if the reduction factor is 2, then the
-    * term cuts the size of the output in half.
+    * Calculate the fraction of records that satisfy the term
+    * (lecture: selectivity), e.g. 0.5 if the term keeps half the records.
+    * F = c: 1/V(F); F1 = F2: 1/max(V(F1), V(F2)); F != c: 1 - 1/V(F);
+    * range terms: see rangeSelectivity.
+    * c1 op c2: 1 or 0, since it is either true or false for every record.
     * @param p the query's plan
-    * @return the integer reduction factor.
+    * @return the selectivity, between 0 and 1
     */
-   public int reductionFactor(Plan p) {
-	  if (this.opr.equals("!=") || this.opr.equals("<>")) {
-		  return 1;
-	  }
-	  if (!this.opr.equals("=")) {
-		  return 3;
-	  }
-	  
+   public double selectivity(Plan p) {
+      if (!lhs.isFieldName() && !rhs.isFieldName())
+         return constantSelectivity();
+      if (this.opr.equals("!=") || this.opr.equals("<>")) {
+         if (lhs.isFieldName() && !rhs.isFieldName())
+            return 1.0 - 1.0 / p.distinctValues(lhs.asFieldName());
+         if (rhs.isFieldName() && !lhs.isFieldName())
+            return 1.0 - 1.0 / p.distinctValues(rhs.asFieldName());
+         return 1.0;
+      }
+      if (!this.opr.equals("="))
+         return rangeSelectivity(p);
+
       String lhsName, rhsName;
       if (lhs.isFieldName() && rhs.isFieldName()) {
          lhsName = lhs.asFieldName();
          rhsName = rhs.asFieldName();
-         return Math.max(p.distinctValues(lhsName),
-                         p.distinctValues(rhsName));
+         return 1.0 / Math.max(p.distinctValues(lhsName),
+                               p.distinctValues(rhsName));
       }
       if (lhs.isFieldName()) {
          lhsName = lhs.asFieldName();
-         return p.distinctValues(lhsName);
+         return 1.0 / p.distinctValues(lhsName);
       }
-      if (rhs.isFieldName()) {
-         rhsName = rhs.asFieldName();
-         return p.distinctValues(rhsName);
-      }
-      // otherwise, the term equates constants
-      if (lhs.asConstant().equals(rhs.asConstant()))
-         return 1;
-      else
-         return Integer.MAX_VALUE;
+      rhsName = rhs.asFieldName();
+      return 1.0 / p.distinctValues(rhsName);
    }
-   
+
+   /**
+    * Selectivity of a term comparing two constants, e.g. "5 > 3".
+    * The term does not depend on the record, so it keeps
+    * all records (1) or none (0).
+    * Comparing an int with a string cannot be decided here
+    * (and fails when the query runs), so the default 1/3 is used.
+    */
+   private double constantSelectivity() {
+      Constant l = lhs.asConstant(), r = rhs.asConstant();
+      switch (opr) {
+      case "=":
+         return l.equals(r) ? 1.0 : 0.0;
+      case "!=":
+      case "<>":
+         return l.equals(r) ? 0.0 : 1.0;
+      }
+      boolean sametype = (l.asString() == null) == (r.asString() == null);
+      if (!sametype)
+         return 1.0 / 3;
+      int cmp = l.compareTo(r);
+      boolean result;
+      switch (opr) {
+      case "<":  result = cmp < 0;  break;
+      case "<=": result = cmp <= 0; break;
+      case ">":  result = cmp > 0;  break;
+      case ">=": result = cmp >= 0; break;
+      default:   return 1.0 / 3;
+      }
+      return result ? 1.0 : 0.0;
+   }
+
+   /**
+    * Selectivity of a range term "F op c" (or "c op F").
+    * Lecture (opt slide 60): the fraction of the range, e.g. for F >= c
+    * (high - c + 1) / (high - low + 1), using the field's low / high
+    * values from the stats. >, < and <= count the matching values the same way.
+    * Falls back to 1/3 when the stats are not known (e.g. strings, F op F).
+    */
+   private double rangeSelectivity(Plan p) {
+      String fldname;
+      Constant val;
+      String op = opr;
+      if (lhs.isFieldName() && !rhs.isFieldName()) {
+         fldname = lhs.asFieldName();
+         val = rhs.asConstant();
+      }
+      else if (rhs.isFieldName() && !lhs.isFieldName()) {
+         // "c op F" is "F flipped(op) c"
+         fldname = rhs.asFieldName();
+         val = lhs.asConstant();
+         switch (opr) {
+         case "<":  op = ">";  break;
+         case "<=": op = ">="; break;
+         case ">":  op = "<";  break;
+         case ">=": op = "<="; break;
+         }
+      }
+      else
+         return 1.0 / 3;
+
+      Constant low = p.minValue(fldname);
+      Constant high = p.maxValue(fldname);
+      if (low == null || high == null || val.asString() != null || low.asString() != null)
+         return 1.0 / 3;
+      long lo = low.asInt(), hi = high.asInt(), c = val.asInt();
+      long domain = hi - lo + 1;
+      long matches;
+      switch (op) {
+      case ">":  matches = hi - c;     break;
+      case ">=": matches = hi - c + 1; break;
+      case "<":  matches = c - lo;     break;
+      case "<=": matches = c - lo + 1; break;
+      default:   return 1.0 / 3;
+      }
+      matches = Math.max(0, Math.min(domain, matches));
+      return (double) matches / domain;
+   }
+
    /**
     * Determine if this term is of the form "F=c"
     * where F is the specified field and c is some constant.
@@ -158,6 +235,6 @@ public class Term {
    }
    
    public String toString() {
-      return lhs.toString() + this.opr + rhs.toString();
+      return lhs.toString() + " " + this.opr + " " + rhs.toString();
    }
 }

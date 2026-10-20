@@ -58,26 +58,21 @@ public class MergeJoinPlan implements Plan {
    /**
     * Return the number of block accesses required to
     * sort both inputs and then mergejoin them.
-    * Cost = sortCost(M) + sortCost(N) + (M + N),
-    * where M and N are the costs of the two inputs
-    * (same as HashJoinPlan and NestedLoopsJoinPlan).
+    * Lecture: sort(M) + sort(N) + (M + N), where sort(M) = 2M * passes.
+    * The inputs may be selections or joins that are pipelined into the
+    * sort, so pass 0 reads them at their own cost C instead of M,
+    * and every later pass works on the M pages of their output:
+    * Cost = C1 + C2 + 2M * passes(M) + 2N * passes(N)
+    * (for base tables C = M, which gives the lecture formula).
     * @see simpledb.plan.Plan#blocksAccessed()
     */
    public int blocksAccessed() {
-      int M = unsorted1.blocksAccessed();
-      int N = unsorted2.blocksAccessed();
-      return sortCost(M) + sortCost(N) + M + N;
-   }
-   
-   // External merge sort cost from lecture:
-   // 2N * (1 + ceil(log_{B-1}(ceil(N/B))))
-   private int sortCost(int N) {
-      if (N == 0)
-         return 0;
-      int B = Math.max(3, tx.availableBuffs());
-      double numRuns = Math.ceil((double) N / B);
-      int numPasses = 1 + (int) Math.ceil(Math.log(numRuns) / Math.log(B - 1));
-      return 2 * N * numPasses;
+      long C1 = unsorted1.blocksAccessed();
+      long C2 = unsorted2.blocksAccessed();
+      int M = new MaterializePlan(tx, unsorted1).blocksAccessed();
+      int N = new MaterializePlan(tx, unsorted2).blocksAccessed();
+      return (int) Math.min(Integer.MAX_VALUE,
+            C1 + C2 + SortPlan.sortCost(tx, M) + SortPlan.sortCost(tx, N));
    }
    
    /**
@@ -89,20 +84,22 @@ public class MergeJoinPlan implements Plan {
    public int recordsOutput() {
       int maxvals = Math.max(p1.distinctValues(fldname1),
                              p2.distinctValues(fldname2));
-      return (p1.recordsOutput() * p2.recordsOutput()) / maxvals;
+      long recs = (long) p1.recordsOutput() * p2.recordsOutput() / maxvals;
+      return (int) Math.min(Integer.MAX_VALUE, recs);
    }
    
    /**
-    * Estimate the distinct number of field values in the join.
-    * Since the join does not increase or decrease field values,
-    * the estimate is the same as in the appropriate underlying query.
+    * Estimate the distinct number of field values in the join:
+    * the smaller of the two inputs' values for the join field,
+    * otherwise the input's value capped by the number of output records.
     * @see simpledb.plan.Plan#distinctValues(java.lang.String)
     */
    public int distinctValues(String fldname) {
-      if (p1.schema().hasField(fldname))
-         return p1.distinctValues(fldname);
-      else
-         return p2.distinctValues(fldname);
+      // lecture (opt slides 65-66): V(U,A) = min(V(R1,A), V(R2,A)) for the
+      // join column A, and V(U,B) = min(||U||, V(R1,B)) for any other column B
+      if (fldname.equals(fldname1) || fldname.equals(fldname2))
+         return Math.max(1, Math.min(p1.distinctValues(fldname1), p2.distinctValues(fldname2)));
+      return Math.max(1, Math.min(recordsOutput(), p1.schema().hasField(fldname) ? p1.distinctValues(fldname) : p2.distinctValues(fldname)));
    }
    
    /**
@@ -113,5 +110,13 @@ public class MergeJoinPlan implements Plan {
    public Schema schema() {
       return sch;
    }
-}
 
+   public String describe(List<String> inputs) {
+      return "Sort-Merge Join: sort " + inputs.get(0) + " and " + inputs.get(1)
+            + ", then merge them on " + fldname1 + " = " + fldname2;
+   }
+
+   public List<Plan> children() {
+      return Arrays.asList(unsorted1, unsorted2);
+   }
+}

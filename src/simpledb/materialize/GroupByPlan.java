@@ -4,6 +4,7 @@ import java.util.*;
 import simpledb.tx.Transaction;
 import simpledb.record.Schema;
 import simpledb.plan.Plan;
+import simpledb.plan.PlanPrinter;
 import simpledb.query.*;
 
 /**
@@ -115,5 +116,26 @@ public class GroupByPlan implements Plan {
     */
    public Schema schema() {
       return sch;
+   }
+
+   public String describe(List<String> inputs) {
+      // e.g. "countofsid" is shown as "count(sid)"
+      List<String> aggs = new ArrayList<>();
+      for (AggregationFn fn : aggfns) {
+         String name = fn.fieldName(), fld = fn.inputField();
+         if (name.endsWith("of" + fld))
+            name = name.substring(0, name.length() - fld.length() - 2) + "(" + fld + ")";
+         aggs.add(name);
+      }
+      if (groupfields.isEmpty())
+         return "Aggregate: compute " + PlanPrinter.list(aggs) + " over all rows of " + inputs.get(0);
+      if (aggs.isEmpty())
+         return "Group By: keep one row per distinct " + PlanPrinter.list(groupfields) + " in " + inputs.get(0);
+      return "Group By: group " + inputs.get(0) + " by " + PlanPrinter.list(groupfields)
+            + " and compute " + PlanPrinter.list(aggs);
+   }
+
+   public List<Plan> children() {
+      return Arrays.asList(p);
    }
 }

@@ -1,5 +1,8 @@
 package simpledb.plan;
 
+import java.util.Arrays;
+import java.util.List;
+import simpledb.query.Constant;
 import simpledb.query.Predicate;
 import simpledb.query.Scan;
 import simpledb.query.SelectScan;
@@ -45,11 +48,11 @@ public class SelectPlan implements Plan {
    /**
     * Estimates the number of output records in the selection,
     * which is determined by the 
-    * reduction factor of the predicate.
+    * selectivity of the predicate.
     * @see simpledb.plan.Plan#recordsOutput()
     */
    public int recordsOutput() {
-      return p.recordsOutput() / pred.reductionFactor(p);
+      return (int) Math.round(p.recordsOutput() * pred.selectivity(p));
    }
    
    /**
@@ -63,16 +66,27 @@ public class SelectPlan implements Plan {
     * @see simpledb.plan.Plan#distinctValues(java.lang.String)
     */
    public int distinctValues(String fldname) {
+      int v;
       if (pred.equatesWithConstant(fldname) != null)
          return 1;
       else {
          String fldname2 = pred.equatesWithField(fldname);
-         if (fldname2 != null) 
-            return Math.min(p.distinctValues(fldname),
-                            p.distinctValues(fldname2));
+         if (fldname2 != null)
+            v = Math.min(p.distinctValues(fldname),
+                         p.distinctValues(fldname2));
          else
-            return p.distinctValues(fldname);
+            v = p.distinctValues(fldname);
       }
+      // a field cannot have more distinct values than there are records
+      return Math.max(1, Math.min(v, recordsOutput()));
+   }
+
+   public Constant minValue(String fldname) {
+      return p.minValue(fldname);
+   }
+
+   public Constant maxValue(String fldname) {
+      return p.maxValue(fldname);
    }
    
    /**
@@ -82,5 +96,13 @@ public class SelectPlan implements Plan {
     */
    public Schema schema() {
       return p.schema();
+   }
+
+   public String describe(List<String> inputs) {
+      return "Select: keep rows of " + inputs.get(0) + " where " + pred;
+   }
+
+   public List<Plan> children() {
+      return Arrays.asList(p);
    }
 }

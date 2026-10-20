@@ -1,6 +1,7 @@
 package simpledb.opt;
 
-import java.util.LinkedHashMap;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 
@@ -21,7 +22,6 @@ import simpledb.materialize.HashJoinPlan;
  */
 class TablePlanner {
    private String tblname;
-   private String lastjoin; // name of the join picked by the last makeJoinPlan call
    private TablePlan myplan;
    private Predicate mypred;
    private Schema myschema;
@@ -48,23 +48,32 @@ class TablePlanner {
    }
    
    /**
-    * Constructs a select plan for the table.
-    * The plan will use an indexselect, if possible.
+    * Constructs the cheapest select plan for the table
+    * (lecture: accessPlan(R), opt slide 45).
+    * Every access path is built: a table scan, and an index select
+    * for each index whose field is equated with a constant.
+    * The one with the lowest estimated cost (blocks accessed) is returned.
     * @return a select plan for the table.
     */
    public Plan makeSelectPlan() {
-      Plan p = makeIndexSelect();
-      if (p == null)
-         p = myplan;
-      return addSelectPred(p);
+      Plan bestplan = addSelectPred(myplan);
+      for (String fldname : indexes.keySet()) {
+         Constant val = mypred.equatesWithConstant(fldname);
+         if (val == null)
+            continue;
+         Plan p = new IndexSelectPlan(myplan, indexes.get(fldname), val);
+         // the index already applies "fldname = val", so only the other terms are left
+         Predicate selectpred = mypred.selectSubPred(myschema).withoutConstant(fldname, val);
+         if (selectpred != null)
+            p = new SelectPlan(p, selectpred);
+         if (cost(p) < cost(bestplan))
+            bestplan = p;
+      }
+      return bestplan;
    }
    
    public String tableName() {
       return tblname;
-   }
-   
-   public String lastJoin() {
-      return lastjoin;
    }
    
    /**
@@ -83,25 +92,20 @@ class TablePlanner {
          return null;
       
       // Lab 7: build all candidate joins (null if not applicable)
-      Map<String,Plan> candidates = new LinkedHashMap<>();
-      candidates.put("index join", makeIndexJoin(current, currsch));
-      candidates.put("hash join", makeHashJoin(current, currsch));
-      candidates.put("sort-merge join", makeMergeSortJoin(current, currsch));
-      candidates.put("nested loops join", makeNestedLoopsJoin(current, currsch));
-      
+      List<Plan> candidates = Arrays.asList(
+            makeIndexJoin(current, currsch),
+            makeHashJoin(current, currsch),
+            makeMergeSortJoin(current, currsch),
+            makeNestedLoopsJoin(current, currsch));
+
       // Pick the cheapest one
-      String bestname = null;
       Plan bestplan = null;
-      for (String name : candidates.keySet()) {
-         Plan p = candidates.get(name);
+      for (Plan p : candidates) {
          if (p == null)
             continue;
-         if (bestplan == null || cost(p) < cost(bestplan)) {
-            bestname = name;
+         if (bestplan == null || cost(p) < cost(bestplan))
             bestplan = p;
-         }
       }
-      lastjoin = bestname;
       return bestplan;
    }
    
@@ -122,57 +126,50 @@ class TablePlanner {
     * @return a product plan of the specified plan and this table
     */
    public Plan makeProductPlan(Plan current) {
-      Plan p = addSelectPred(myplan);
+      Plan p = makeSelectPlan();
       return new MultibufferProductPlan(tx, current, p);
    }
    
-   private Plan makeIndexSelect() {
-      for (String fldname : indexes.keySet()) {
-         Constant val = mypred.equatesWithConstant(fldname);
-         if (val != null) {
-            IndexInfo ii = indexes.get(fldname);
-            System.out.println("index on " + fldname + " used");
-            return new IndexSelectPlan(myplan, ii, val);
-         }
-      }
-      return null;
-   }
    
    // New method added for lab4 parta. Copied makeIndexJoin
+   // The selection on this table is pushed below the join (lecture: push
+   // selections down), so only the qualifying records are sorted.
    private Plan makeMergeSortJoin(Plan current, Schema currsch) {
 	   for (String fldname : this.myschema.fields()) {
 		   String outerfield = this.mypred.equatesWithField(fldname);
 		   if (outerfield != null && currsch.hasField(outerfield)) {
-			   Plan p = new MergeJoinPlan(tx, current, myplan, outerfield, fldname);
-			   p = addSelectPred(p);
-			   return addJoinPred(p, currsch);
+			   Plan p = new MergeJoinPlan(tx, current, makeSelectPlan(), outerfield, fldname);
+			   return addRemainingJoinPred(p, currsch, fldname, outerfield);
 		   }
 	   }
 	   return null;
    }
-   
+
    // New method added for lab5
+   // Selection pushed down as in makeMergeSortJoin, so only the
+   // qualifying records are partitioned.
    private Plan makeHashJoin(Plan current, Schema currsch) {
 	   for (String fldname : this.myschema.fields()) {
 		   String outerfield = this.mypred.equatesWithField(fldname);
 		   if (outerfield != null && currsch.hasField(outerfield)) {
-			   Plan p = new HashJoinPlan(tx, current, myplan, outerfield, fldname);
-			   p = addSelectPred(p);
-			   return addJoinPred(p, currsch);
+			   Plan p = new HashJoinPlan(tx, current, makeSelectPlan(), outerfield, fldname);
+			   return addRemainingJoinPred(p, currsch, fldname, outerfield);
 		   }
 	   }
 	   return null;
    }
-   
+
    // New method added for lab4 partc.
    private Plan makeNestedLoopsJoin(Plan current, Schema currsch) {
 	   Predicate joinpred = this.mypred.joinSubPred(myschema, currsch);
 	   if (joinpred == null)
 		   return null;
-	   Plan p = addSelectPred(this.myplan);
+	   Plan p = makeSelectPlan();
 	   return new NestedLoopsJoinPlan(current, p, joinpred);
    }
-   
+
+   // The index join probes the table itself, so the selection
+   // on this table can only be applied after the join.
    private Plan makeIndexJoin(Plan current, Schema currsch) {
       for (String fldname : indexes.keySet()) {
          String outerfield = mypred.equatesWithField(fldname);
@@ -180,7 +177,7 @@ class TablePlanner {
             IndexInfo ii = indexes.get(fldname);
             Plan p = new IndexJoinPlan(current, myplan, ii, outerfield);
             p = addSelectPred(p);
-            return addJoinPred(p, currsch);
+            return addRemainingJoinPred(p, currsch, fldname, outerfield);
          }
       }
       return null;
@@ -204,6 +201,22 @@ class TablePlanner {
    
    private Plan addJoinPred(Plan p, Schema currsch) {
       Predicate joinpred = mypred.joinSubPred(currsch, myschema);
+      if (joinpred != null)
+         return new SelectPlan(p, joinpred);
+      else
+         return p;
+   }
+
+   /**
+    * Adds the join terms other than "fldname=outerfield", which the
+    * join itself already enforces. Re-applying that term would also
+    * count its selectivity twice in recordsOutput().
+    */
+   private Plan addRemainingJoinPred(Plan p, Schema currsch, String fldname, String outerfield) {
+      Predicate joinpred = mypred.joinSubPred(currsch, myschema);
+      if (joinpred == null)
+         return p;
+      joinpred = joinpred.withoutEquality(fldname, outerfield);
       if (joinpred != null)
          return new SelectPlan(p, joinpred);
       else

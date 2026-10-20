@@ -1,5 +1,6 @@
 package simpledb.materialize;
 
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -140,23 +141,35 @@ public class HashJoinPlan implements Plan {
 	}
 	
 	// -------------------- end of Open() method ---------------------
+	/**
+	 * Lecture (Grace hash join): 3(M + N) with one partitioning pass,
+	 * plus 2(M + N) for every extra (recursive) partitioning pass.
+	 * The inputs may be selections or joins that are pipelined into the
+	 * partitioning, so the first read costs C (their own cost) instead
+	 * of M, and the partitions only hold the M pages of their output:
+	 * Cost = C1 + C2 + 2 * passes * (M + N)
+	 * (for base tables C = M, which gives the lecture formula).
+	 */
 	public int blocksAccessed() {
 		int B = this.tx.availableBuffs();
 		int partitionNum = Math.max(2, B - 1); // Set to 2 cause we cant divide with 0 = Math.Log(1)
 		int maxSize = Math.max(1, B - 2);
-		int M = this.r.blocksAccessed();
-		int N = this.s.blocksAccessed();
-		
+		long C1 = this.r.blocksAccessed();
+		long C2 = this.s.blocksAccessed();
+		int M = new MaterializePlan(tx, this.r).blocksAccessed();
+		int N = new MaterializePlan(tx, this.s).blocksAccessed();
+
 		int small = Math.min(M, N);
 		int numPasses = (int) Math.ceil(Math.log((double) small / maxSize) / Math.log(partitionNum));
 		numPasses = Math.max(1, Math.min(numPasses, MAX_LEVEL + 1));
-		return (2 * numPasses + 1) * (M + N);
+		return (int) Math.min(Integer.MAX_VALUE, C1 + C2 + 2L * numPasses * (M + N));
 	}
-	
+
    public int recordsOutput() {
 	    int maxvals = Math.max(this.r.distinctValues(field1),
 	                           this.s.distinctValues(field2));
-	    return (this.r.recordsOutput() * this.s.recordsOutput()) / maxvals;
+	    long recs = (long) this.r.recordsOutput() * this.s.recordsOutput() / maxvals;
+	    return (int) Math.min(Integer.MAX_VALUE, recs);
    }
    
    public Schema schema() {
@@ -164,10 +177,18 @@ public class HashJoinPlan implements Plan {
    }
    
    public int distinctValues(String fldname) {
-	   if (this.r.schema().hasField(fldname)) {
-		   return this.r.distinctValues(fldname);
-	   } else {
-		   return this.s.distinctValues(fldname);
-	   }
+      // lecture (opt slides 65-66): V(U,A) = min(V(R1,A), V(R2,A)) for the
+      // join column A, and V(U,B) = min(||U||, V(R1,B)) for any other column B
+      if (fldname.equals(field1) || fldname.equals(field2))
+         return Math.max(1, Math.min(r.distinctValues(field1), s.distinctValues(field2)));
+      return Math.max(1, Math.min(recordsOutput(), r.schema().hasField(fldname) ? r.distinctValues(fldname) : s.distinctValues(fldname)));
+   }
+
+   public String describe(List<String> inputs) {
+      return "Hash Join: join " + inputs.get(0) + " and " + inputs.get(1) + " on " + field1 + " = " + field2;
+   }
+
+   public List<Plan> children() {
+      return Arrays.asList(r, s);
    }
 }
