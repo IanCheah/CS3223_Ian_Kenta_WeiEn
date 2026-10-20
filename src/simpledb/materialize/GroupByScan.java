@@ -14,6 +14,7 @@ public class GroupByScan implements Scan {
    private List<AggregationFn> aggfns;
    private GroupValue groupval;
    private boolean moregroups;
+   private boolean globalRowNeeded;
    
    /**
     * Create a groupby scan, given a grouped table scan.
@@ -38,7 +39,15 @@ public class GroupByScan implements Scan {
     */
    public void beforeFirst() {
       s.beforeFirst();
+      for (AggregationFn fn : aggfns) {
+    	  fn.reset();
+      }
+      
       moregroups = s.next();
+      
+      // to differentiate between outputs that are empty and outputs that are empty but still need to return a global 0 row
+      globalRowNeeded = !moregroups && groupfields.isEmpty() && !aggfns.isEmpty();
+      
    }
    
    /**
@@ -53,19 +62,34 @@ public class GroupByScan implements Scan {
     * @see simpledb.query.Scan#next()
     */
    public boolean next() {
-      if (!moregroups)
-         return false;
-      for (AggregationFn fn : aggfns)
-         fn.processFirst(s);
-      groupval = new GroupValue(s, groupfields);
-      while(moregroups = s.next()) {
-         GroupValue gv = new GroupValue(s, groupfields);
-         if (!groupval.equals(gv))
-            break;
-         for (AggregationFn fn : aggfns)
-            fn.processNext(s);
-      }
-      return true;
+	   if (globalRowNeeded) {
+	        globalRowNeeded = false;
+	        return true;
+	    }
+
+	    if (!moregroups) {
+	        return false;
+	    }
+
+	    for (AggregationFn fn : aggfns) {
+	        fn.processFirst(s);
+	    }
+
+	    groupval = new GroupValue(s, groupfields);
+
+	    while ((moregroups = s.next())) {
+	        GroupValue nextGroup = new GroupValue(s, groupfields);
+
+	        if (!groupval.equals(nextGroup)) {
+	            break;
+	        }
+
+	        for (AggregationFn fn : aggfns) {
+	            fn.processNext(s);
+	        }
+	    }
+
+	    return true;
    }
    
    /**
