@@ -51,7 +51,22 @@ public class HeuristicQueryPlanner implements QueryPlanner {
 
       // Step 3: Group By
       if (!data.groupFields().isEmpty() || !data.aggFns().isEmpty()) {
-    	  currentplan = new GroupByPlan(tx, currentplan, data.groupFields(), data.aggFns());
+    	  Set<String> allowedFields = new HashSet<>(data.groupFields());
+
+    	    for (AggregationFn fn : data.aggFns()) {
+    	        allowedFields.add(fn.fieldName());
+    	    }
+
+    	    for (String selected : data.fields()) {
+    	        if (!allowedFields.contains(selected)) {
+    	            throw new IllegalArgumentException(
+    	                "Selected field must appear in GROUP BY "
+    	                + "or be aggregated: " + selected
+    	            );
+    	        }
+    	    }
+
+    	    currentplan = new GroupByPlan(tx, currentplan, data.groupFields(), data.aggFns());
       }
 
       // Step 4:  Project

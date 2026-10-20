@@ -28,13 +28,31 @@ public class GroupByPlan implements Plan {
     * @param tx the calling transaction
     */
    public GroupByPlan(Transaction tx, Plan p, List<String> groupfields, List<AggregationFn> aggfns) {
-      this.p = SortPlan.onFields(tx, p, groupfields);
       this.groupfields = groupfields;
       this.aggfns = aggfns;
-      for (String fldname : groupfields)
-         sch.add(fldname, p.schema());
-      for (AggregationFn fn : aggfns)
-         sch.addIntField(fn.fieldName());
+      
+      Schema input = p.schema();
+      
+      for (String fldname : groupfields) {
+    	  if (!input.hasField(fldname)) {
+    		  throw new IllegalArgumentException("Unknown Group by field: " + fldname);
+    	  }
+    	  sch.add(fldname, input);
+      }
+      
+      for (AggregationFn fn : aggfns) {
+    	  if (sch.hasField(fn.fieldName())) {
+              throw new IllegalArgumentException(
+                  "Aggregate output name conflicts with a group field: "
+                  + fn.fieldName()
+              );
+          }
+          fn.addResultField(input, sch);
+      }
+      
+      this.p = groupfields.isEmpty()
+              ? p
+              : SortPlan.onFields(tx, p, groupfields);
    }
    
    /**

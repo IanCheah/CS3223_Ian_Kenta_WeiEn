@@ -1,6 +1,7 @@
 package simpledb.materialize;
 
 import simpledb.query.*;
+import simpledb.record.Schema;
 
 /**
  * The <i>max</i> aggregation function.
@@ -18,14 +19,20 @@ public class MaxFn implements AggregationFn {
       this.fldname = fldname;
    }
    
+   public void reset() {
+	   val = null;
+   }
+   
    /**
     * Start a new maximum to be the 
     * field value in the current record.
     * @see simpledb.materialize.AggregationFn#processFirst(simpledb.query.Scan)
     */
    public void processFirst(Scan s) {
-      val = s.getVal(fldname);
+	  reset();
+      processNext(s);
    }
+   
    
    /**
     * Replace the current maximum by the field value
@@ -34,8 +41,10 @@ public class MaxFn implements AggregationFn {
     */
    public void processNext(Scan s) {
       Constant newval = s.getVal(fldname);
-      if (newval.compareTo(val) > 0)
-         val = newval;
+      if (val == null || newval.compareTo(val) > 0) {
+    	  val = newval;
+      }
+         
    }
    
    /**
@@ -46,11 +55,28 @@ public class MaxFn implements AggregationFn {
       return "maxof" + fldname;
    }
    
+   public String inputField() {
+	   return fldname;
+   }
+   
    /**
     * Return the current maximum.
     * @see simpledb.materialize.AggregationFn#value()
     */
    public Constant value() {
+      if (val == null) {
+    	  throw new IllegalStateException();
+      }
+      
       return val;
+   }
+   
+   public void addResultField(Schema input, Schema output) {
+       if (!input.hasField(fldname)) {
+           throw new IllegalArgumentException(
+               "Unknown aggregate field: " + fldname
+           );
+       }
+       output.addField(fieldName(), input.type(fldname), input.length(fldname));
    }
 }

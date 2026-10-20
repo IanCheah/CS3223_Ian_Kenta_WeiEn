@@ -2,7 +2,7 @@ package simpledb.parse;
 
 import java.util.*;
 
-import simpledb.materialize.AggregationFn;
+import simpledb.materialize.*;
 import simpledb.query.*;
 import simpledb.record.*;
 
@@ -66,7 +66,8 @@ public class Parser {
 //    	  System.out.println("Distinct is " + isDistinct);
       }
       
-      List<String> fields = selectList();
+      List<AggregationFn> aggFns = new ArrayList<>();
+      List<String> fields = selectList(aggFns);
       lex.eatKeyword("from");
       Collection<String> tables = tableList();
       Predicate pred = new Predicate();
@@ -83,8 +84,6 @@ public class Parser {
     	  groupFields = this.fieldList();
       }
       
-      // Lab5 - Optional AggregationFns
-      List<AggregationFn> aggFns = new ArrayList<>();
       
       // Lab3 - order by clause
       List<SortField> sortfields = new ArrayList<SortField>();
@@ -111,15 +110,73 @@ public class Parser {
     		  aggFns);
    }
    
-   private List<String> selectList() {
+   private List<String> selectList(List<AggregationFn> aggFns) {
       List<String> L = new ArrayList<String>();
-      L.add(field());
-      if (lex.matchDelim(',')) {
+      L.add(selectItem(aggFns));
+      while (lex.matchDelim(',')) {
          lex.eatDelim(',');
-         L.addAll(selectList());
+         L.add(selectItem(aggFns));
       }
       return L;
    }
+   
+   private String selectItem(List<AggregationFn> aggFns) {
+	   String function = null;
+	   
+	   for (String name : Arrays.asList("count", "sum", "min", "max", "avg")) {
+		   if (lex.matchKeyword(name)) {
+			   function = name;
+			   break;
+		   }
+	   }
+	   
+	   if (function == null) {
+		   return field();
+	   }
+	   
+	   lex.eatKeyword(function);
+	   lex.eatDelim('(');
+	   String inputField = field();
+	   lex.eatDelim(')');
+	   
+	   AggregationFn fn;
+	   
+	   switch (function) {
+	   		case "count":
+	   			fn = new CountFn(inputField);
+	   			break;
+	   		case "sum":
+	   			fn = new SumFn(inputField);
+	   			break;
+	   		case "max":
+	   			fn = new MaxFn(inputField);
+	   			break;
+	   		case "min":
+	   			fn = new MinFn(inputField);
+	   			break;
+	   		case "avg":
+	   			fn = new AvgFn(inputField);
+	   			break;
+	   		default:
+	   			throw new BadSyntaxException();		
+		   
+	   }
+	   
+	   // Making sure you dont count the same aggregate twice
+	   
+	   for (AggregationFn existing : aggFns) {
+		   if (existing.fieldName().equals(fn.fieldName())) {
+			   return existing.fieldName();
+		   }
+	   }
+	   
+	   aggFns.add(fn);
+	   return fn.fieldName();
+	   
+	   
+   }
+   
+   
    
    private List<SortField> sortList() {
 	   String fieldName = field();

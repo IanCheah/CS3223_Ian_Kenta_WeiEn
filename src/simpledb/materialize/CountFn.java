@@ -1,6 +1,7 @@
 package simpledb.materialize;
 
 import simpledb.query.*;
+import simpledb.record.Schema;
 
 /**
  * The <i>count</i> aggregation function.
@@ -18,6 +19,10 @@ public class CountFn implements AggregationFn {
       this.fldname = fldname;
    }
    
+   public void reset() {
+	   count = 0;
+   }
+   
    /**
     * Start a new count.
     * Since SimpleDB does not support null values,
@@ -27,7 +32,8 @@ public class CountFn implements AggregationFn {
     * @see simpledb.materialize.AggregationFn#processFirst(simpledb.query.Scan)
     */
    public void processFirst(Scan s) {
-      count = 1;
+      reset();
+      processNext(s);
    }
    
    /**
@@ -48,11 +54,24 @@ public class CountFn implements AggregationFn {
       return "countof" + fldname;
    }
    
+   public String inputField() {
+	   return fldname;
+   }
+   
    /**
     * Return the current count.
     * @see simpledb.materialize.AggregationFn#value()
     */
    public Constant value() {
       return new Constant(count);
+   }
+   
+   public void addResultField(Schema input, Schema output) {
+       if (!input.hasField(fldname)) {
+           throw new IllegalArgumentException(
+               "Unknown aggregate field: " + fldname
+           );
+       }
+       output.addIntField(fieldName());
    }
 }
