@@ -10,6 +10,7 @@ import simpledb.materialize.AggregationFn;
 import simpledb.metadata.MetadataMgr;
 import simpledb.parse.QueryData;
 import simpledb.plan.*;
+import simpledb.query.SortField;
 
 /**
  * A query planner that optimizes using a heuristic-based algorithm.
@@ -73,6 +74,29 @@ public class HeuristicQueryPlanner implements QueryPlanner {
 
     	    currentplan = new GroupByPlan(tx, currentplan, data.groupFields(), data.aggFns());
       }
+      
+      // Step 4: Order By on fields that are not selected must be sorted before
+      // projecting, because projecting removes these fields.
+      List<SortField> sortFields = data.sortFields();
+      boolean sortBeforeProj = false;
+      for (SortField sf : sortFields) {
+    	  String currField = sf.getFieldName();
+    	  if (!currentplan.schema().hasField(currField)) {
+    		  throw new IllegalArgumentException("Order Field is invalid.");
+    	  }
+    	  
+    	  if (!data.fields().contains(currField)) {
+    		  sortBeforeProj = true;
+    	  }
+      }
+      
+      if (sortBeforeProj) {
+    	  if (data.isDistinct()) {
+    		  throw new IllegalArgumentException("ORDER BY fields must appear SELECT list if DISTINCT is specified.");
+    	  }
+    	  
+    	  currentplan = new SortPlan(tx, currentplan, sortFields);
+      }
 
       // Step 4:  Project
       Plan p = new ProjectPlan(currentplan, data.fields());
@@ -83,7 +107,7 @@ public class HeuristicQueryPlanner implements QueryPlanner {
       }
 
       // Step 6: Order By
-      if (!data.sortFields().isEmpty()) {
+      if (!sortBeforeProj && !data.sortFields().isEmpty()) {
     	  p = new SortPlan(tx, p, data.sortFields());
       }
 
