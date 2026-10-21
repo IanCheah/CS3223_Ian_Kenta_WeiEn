@@ -1,7 +1,10 @@
 package simpledb.query;
 
+import java.util.List;
+import java.util.ArrayList;
+
 import simpledb.plan.Plan;
-import simpledb.record.*;
+import simpledb.record.Schema;
 
 /**
  * A term is a comparison between two expressions.
@@ -232,6 +235,23 @@ public class Term {
     */
    public boolean appliesTo(Schema sch) {
       return lhs.appliesTo(sch) && rhs.appliesTo(sch);
+   }
+   
+   /**
+    * Returns the names of all fields included in this term, skipping constants
+    * (0, 1, or 2 names)
+    */
+   public List<String> fieldNames() {
+	   List<String> result = new ArrayList<>();
+	   if (this.lhs.isFieldName()) {
+		   result.add(this.lhs.asFieldName());
+	   }
+	   
+	   if (this.rhs.isFieldName()) {
+		   result.add(this.rhs.asFieldName());
+	   }
+	   
+	   return result;
    }
    
    public String toString() {

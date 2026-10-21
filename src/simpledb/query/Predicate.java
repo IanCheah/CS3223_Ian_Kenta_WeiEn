@@ -175,6 +175,14 @@ public class Predicate {
       }
       return null;
    }
+   
+   public List<String> fieldNames() {
+	   List<String> result = new ArrayList<>();
+	   for (Term t : this.terms) {
+		   result.addAll(t.fieldNames());
+	   }
+	   return result;
+   }
 
    public String toString() {
       Iterator<Term> iter = terms.iterator();

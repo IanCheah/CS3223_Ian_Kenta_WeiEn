@@ -2,6 +2,8 @@ package simpledb.plan;
 
 import simpledb.tx.Transaction;
 import simpledb.parse.*;
+import simpledb.record.Schema;
+import simpledb.metadata.MetadataMgr;
 
 /**
  * The object that executes SQL statements.
@@ -10,10 +12,12 @@ import simpledb.parse.*;
 public class Planner {
    private QueryPlanner qplanner;
    private UpdatePlanner uplanner;
+   private MetadataMgr metadataMgr;
    
-   public Planner(QueryPlanner qplanner, UpdatePlanner uplanner) {
+   public Planner(QueryPlanner qplanner, UpdatePlanner uplanner, MetadataMgr metadataMgr) {
       this.qplanner = qplanner;
       this.uplanner = uplanner;
+      this.metadataMgr = metadataMgr;
    }
    
    /**
@@ -25,7 +29,7 @@ public class Planner {
    public Plan createQueryPlan(String qry, Transaction tx) {
       Parser parser = new Parser(qry);
       QueryData data = parser.query();
-      verifyQuery(data);
+      verifyQuery(data, tx);
       return qplanner.createPlan(data, tx);
    }
    
@@ -59,8 +63,24 @@ public class Planner {
          return 0;
    }
  
-   // SimpleDB does not verify queries, although it should.
-   private void verifyQuery(QueryData data) {
+   // Verifies that every fields in predicates is a valid one
+   private void verifyQuery(QueryData data, Transaction tx) {
+	   // Verify that every field in the where clause must belong to one of the tables
+	   Schema allFields = new Schema();
+	   for (String tableName : data.tables()) {
+		   Schema tmpSch = this.metadataMgr.getLayout(tableName, tx).schema();
+		   allFields.addAll(tmpSch);
+	   }
+
+	   for (String fieldName : data.pred().fieldNames()) {
+		   // Check that each fieldName mentioned exists
+		   if (!allFields.hasField(fieldName)) {
+			   throw new IllegalArgumentException("Unknown field '" + fieldName + "' in WHERE clause"
+					      + " (if it is a string value, put it in quotes: '" + fieldName + "')");
+		   }
+	   }
+	   
+	   return;
    }
 
    // SimpleDB does not verify updates, although it should.

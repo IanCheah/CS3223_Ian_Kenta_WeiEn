@@ -42,7 +42,6 @@ public class HeuristicQueryPlanner implements QueryPlanner {
    }
 
    public Plan createPlan(QueryData data, Transaction tx) {
-
       // Step 1:  Create a TablePlanner object for each mentioned table
       List<TablePlanner> tableplanners = new ArrayList<>();
       for (String tblname : data.tables()) {
