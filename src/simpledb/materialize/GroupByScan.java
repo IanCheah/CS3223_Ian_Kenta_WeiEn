@@ -46,7 +46,7 @@ public class GroupByScan implements Scan {
       moregroups = s.next();
       
       // to differentiate between outputs that are empty and outputs that are empty but still need to return a global 0 row
-      globalRowNeeded = !moregroups && groupfields.isEmpty() && !aggfns.isEmpty();
+      globalRowNeeded = !moregroups && groupfields.isEmpty() && !aggfns.isEmpty() && this.allHaveValueForEmptyInput();
       
    }
    
@@ -152,6 +152,19 @@ public class GroupByScan implements Scan {
          if (fn.fieldName().equals(fldname))
          return true;
       return false;
+   }
+   
+   /**
+    * Return true if every aggregate has a value for an empty input.
+    * If not, an empty input produces no output row.
+    */
+   private boolean allHaveValueForEmptyInput() {
+	   for (AggregationFn fn : this.aggfns) {
+		   if (!fn.hasValueForEmptyInput()) {
+			   return false;
+		   }
+	   }
+	   return true;
    }
 }
 

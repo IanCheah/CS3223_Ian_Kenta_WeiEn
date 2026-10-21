@@ -74,4 +74,8 @@ public class CountFn implements AggregationFn {
        }
        output.addIntField(fieldName());
    }
+
+   public boolean hasValueForEmptyInput() {
+	   return true;
+   }
 }

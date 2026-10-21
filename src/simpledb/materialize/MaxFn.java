@@ -79,4 +79,8 @@ public class MaxFn implements AggregationFn {
        }
        output.addField(fieldName(), input.type(fldname), input.length(fldname));
    }
+   
+   public boolean hasValueForEmptyInput() {
+	   return false;
+   }
 }

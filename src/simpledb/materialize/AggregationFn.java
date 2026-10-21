@@ -41,4 +41,10 @@ public interface AggregationFn {
    Constant value();
    
    void addResultField(Schema input, Schema output);
+   
+   
+   /**
+    * Returns true if this function has a defined value for zero input rows (like COUNT returning 0)
+    */
+   boolean hasValueForEmptyInput();
 }

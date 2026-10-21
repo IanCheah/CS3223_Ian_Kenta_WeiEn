@@ -67,5 +67,9 @@ public class AvgFn implements AggregationFn {
        }
        output.addIntField(fieldName());
    }
+   
+   public boolean hasValueForEmptyInput() {
+	   return false;
+   }
 }
 
