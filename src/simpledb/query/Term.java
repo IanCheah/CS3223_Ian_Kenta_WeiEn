@@ -45,27 +45,27 @@ public class Term {
       Constant lhsval = lhs.evaluate(s);
       Constant rhsval = rhs.evaluate(s);
       switch (opr) {
-      case "=":
-    	  return lhsval.equals(rhsval);
-      case "!=":
-      case "<>":
-    	  return !lhsval.equals(rhsval);
-      case "<":
-    	  return lhsval.compareTo(rhsval) < 0;
-      case "<=":
-    	  return lhsval.compareTo(rhsval) <= 0;
-      case ">":
-    	  return lhsval.compareTo(rhsval) > 0;
-      case ">=":
-    	  return lhsval.compareTo(rhsval) >= 0;
-      default:
-    	  throw new RuntimeException("unrecognised /  unimplemented operator: " + opr);
+         case "=":
+            return lhsval.equals(rhsval);
+         case "!=":
+         case "<>":
+            return !lhsval.equals(rhsval);
+         case "<":
+            return lhsval.compareTo(rhsval) < 0;
+         case "<=":
+            return lhsval.compareTo(rhsval) <= 0;
+         case ">":
+            return lhsval.compareTo(rhsval) > 0;
+         case ">=":
+            return lhsval.compareTo(rhsval) >= 0;
+         default:
+            throw new RuntimeException("unrecognised /  unimplemented operator: " + opr);
       }
    }
    
    /**
     * Calculate the fraction of records that satisfy the term
-    * (lecture: selectivity), e.g. 0.5 if the term keeps half the records.
+    * selectivity, e.g. 0.5 if the term keeps half the records.
     * F = c: 1/V(F); F1 = F2: 1/max(V(F1), V(F2)); F != c: 1 - 1/V(F);
     * range terms: see rangeSelectivity.
     * c1 op c2: 1 or 0, since it is either true or false for every record.
@@ -110,11 +110,11 @@ public class Term {
    private double constantSelectivity() {
       Constant l = lhs.asConstant(), r = rhs.asConstant();
       switch (opr) {
-      case "=":
-         return l.equals(r) ? 1.0 : 0.0;
-      case "!=":
-      case "<>":
-         return l.equals(r) ? 0.0 : 1.0;
+         case "=":
+            return l.equals(r) ? 1.0 : 0.0;
+         case "!=":
+         case "<>":
+            return l.equals(r) ? 0.0 : 1.0;
       }
       boolean sametype = (l.asString() == null) == (r.asString() == null);
       if (!sametype)
@@ -122,18 +122,18 @@ public class Term {
       int cmp = l.compareTo(r);
       boolean result;
       switch (opr) {
-      case "<":  result = cmp < 0;  break;
-      case "<=": result = cmp <= 0; break;
-      case ">":  result = cmp > 0;  break;
-      case ">=": result = cmp >= 0; break;
-      default:   return 1.0 / 3;
+         case "<":  result = cmp < 0;  break;
+         case "<=": result = cmp <= 0; break;
+         case ">":  result = cmp > 0;  break;
+         case ">=": result = cmp >= 0; break;
+         default:   return 1.0 / 3;
       }
       return result ? 1.0 : 0.0;
    }
 
    /**
     * Selectivity of a range term "F op c" (or "c op F").
-    * Lecture (opt slide 60): the fraction of the range, e.g. for F >= c
+    * the fraction of the range, e.g. for F >= c
     * (high - c + 1) / (high - low + 1), using the field's low / high
     * values from the stats. >, < and <= count the matching values the same way.
     * Falls back to 1/3 when the stats are not known (e.g. strings, F op F).
@@ -151,10 +151,10 @@ public class Term {
          fldname = rhs.asFieldName();
          val = lhs.asConstant();
          switch (opr) {
-         case "<":  op = ">";  break;
-         case "<=": op = ">="; break;
-         case ">":  op = "<";  break;
-         case ">=": op = "<="; break;
+            case "<":  op = ">";  break;
+            case "<=": op = ">="; break;
+            case ">":  op = "<";  break;
+            case ">=": op = "<="; break;
          }
       }
       else
@@ -168,11 +168,11 @@ public class Term {
       long domain = hi - lo + 1;
       long matches;
       switch (op) {
-      case ">":  matches = hi - c;     break;
-      case ">=": matches = hi - c + 1; break;
-      case "<":  matches = c - lo;     break;
-      case "<=": matches = c - lo + 1; break;
-      default:   return 1.0 / 3;
+         case ">":  matches = hi - c;     break;
+         case ">=": matches = hi - c + 1; break;
+         case "<":  matches = c - lo;     break;
+         case "<=": matches = c - lo + 1; break;
+         default:   return 1.0 / 3;
       }
       matches = Math.max(0, Math.min(domain, matches));
       return (double) matches / domain;

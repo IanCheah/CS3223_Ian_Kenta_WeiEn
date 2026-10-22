@@ -50,8 +50,7 @@ public class Predicate {
 
    /**
     * Calculate the fraction of records that satisfy the predicate.
-    * Terms are assumed independent (as in lecture), so their
-    * selectivities are multiplied.
+    * Terms are assumed independent, so their selectivities are multiplied.
     * A fraction, not an integer reduction factor, so that e.g. a term
     * keeping 2/3 of the records is not rounded to 1/2.
     * @param p the query's plan

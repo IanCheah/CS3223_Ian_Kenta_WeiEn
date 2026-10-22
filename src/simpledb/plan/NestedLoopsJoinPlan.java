@@ -34,7 +34,7 @@ public class NestedLoopsJoinPlan implements Plan {
    }
 
    // This is just an estimate.
-   // The selectivity uses the inputs' V values (lecture: 1/max(V1, V2)),
+   // The selectivity uses the inputs' V values (1/max(V1, V2)),
    // not this plan's own, since those depend on recordsOutput.
    public int recordsOutput() {
       double recs = (double) p1.recordsOutput() * p2.recordsOutput() * joinpred.selectivity(new ProductPlan(p1, p2));
@@ -42,7 +42,7 @@ public class NestedLoopsJoinPlan implements Plan {
    }
 	   
    public int distinctValues(String fldname) {
-      // lecture (opt slides 65-66): V(U,A) = min(V(R1,A), V(R2,A)) for the
+      // V(U,A) = min(V(R1,A), V(R2,A)) for the
       // join column A, and V(U,B) = min(||U||, V(R1,B)) for any other column B
       String other = joinpred.equatesWithField(fldname);
       if (other != null)

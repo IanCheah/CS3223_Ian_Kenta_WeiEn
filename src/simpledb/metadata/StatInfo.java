@@ -9,7 +9,7 @@ import simpledb.query.Constant;
  * A StatInfo object holds statistical information about a table:
  * the number of blocks, the number of records,
  * and, for each field, the number of distinct values
- * and the lowest / highest value (as in lecture: V(R,A), low, high).
+ * and the lowest / highest value (V(R,A), low, high).
  * @author Edward Sciore
  */
 public class StatInfo {

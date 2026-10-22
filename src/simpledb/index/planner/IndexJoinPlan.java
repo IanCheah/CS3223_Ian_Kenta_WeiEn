@@ -77,8 +77,8 @@ public class IndexJoinPlan implements Plan {
     * @see simpledb.plan.Plan#distinctValues(java.lang.String)
     */
    public int distinctValues(String fldname) {
-      // lecture (opt slides 65-66): V(U,A) = min(V(R1,A), V(R2,A)) for the
-      // join column A, and V(U,B) = min(||U||, V(R1,B)) for any other column B
+      // V(U,A) = min(V(R1,A), V(R2,A)) for the join column A, 
+      // and V(U,B) = min(||U||, V(R1,B)) for any other column B
       if (fldname.equals(joinfield) || fldname.equals(ii.fieldName()))
          return Math.max(1, Math.min(p1.distinctValues(joinfield), p2.distinctValues(ii.fieldName())));
       return Math.max(1, Math.min(recordsOutput(), p1.schema().hasField(fldname) ? p1.distinctValues(fldname) : p2.distinctValues(fldname)));
