@@ -43,7 +43,7 @@ public class IndexUpdatePlanner implements UpdatePlanner {
 			IndexInfo ii = indexes.get(fldname);
 			if (ii != null) {
 				Index idx = ii.open();
-				idx.insert(val, rid);
+				idx.insert(s.getVal(fldname), rid);
 				idx.close();
 			}
 		}
@@ -97,7 +97,7 @@ public class IndexUpdatePlanner implements UpdatePlanner {
 			if (idx != null) {
 				RID rid = s.getRid();
 				idx.delete(oldval, rid);
-				idx.insert(newval, rid);
+				idx.insert(s.getVal(fldname), rid);
 			}
 			count++;
 		}

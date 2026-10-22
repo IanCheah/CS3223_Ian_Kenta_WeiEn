@@ -162,8 +162,12 @@ public class Term {
 
       Constant low = p.minValue(fldname);
       Constant high = p.maxValue(fldname);
-      if (low == null || high == null || val.asString() != null || low.asString() != null)
-         return 1.0 / 3;
+      if (low == null || high == null
+    	        || !low.isInt()
+    	        || !high.isInt()
+    	        || !val.isInt()) {
+    	    return 1.0 / 3;
+    	}
       long lo = low.asInt(), hi = high.asInt(), c = val.asInt();
       long domain = hi - lo + 1;
       long matches;

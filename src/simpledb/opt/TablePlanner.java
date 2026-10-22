@@ -92,11 +92,34 @@ class TablePlanner {
          return null;
       
       // Lab 7: build all candidate joins (null if not applicable)
-      List<Plan> candidates = Arrays.asList(
-            makeIndexJoin(current, currsch),
-            makeHashJoin(current, currsch),
-            makeMergeSortJoin(current, currsch),
-            makeNestedLoopsJoin(current, currsch));
+      String mode = System.getProperty("simpledb.joinMode", "all");
+      List<Plan> candidates = new java.util.ArrayList<>();
+      switch (mode) {
+         case "nested":
+            candidates.add(makeNestedLoopsJoin(current, currsch));
+            break;
+         case "merge":
+            candidates.add(makeMergeSortJoin(current, currsch));
+            break;
+         case "hash":
+            candidates.add(makeHashJoin(current, currsch));
+            break;
+         case "index":
+            candidates.add(makeIndexJoin(current, currsch));
+            break;
+         case "index_nested":
+            candidates.add(makeIndexJoin(current, currsch));
+            candidates.add(makeNestedLoopsJoin(current, currsch));
+            break;
+         case "all":
+            candidates.add(makeIndexJoin(current, currsch));
+            candidates.add(makeHashJoin(current, currsch));
+            candidates.add(makeMergeSortJoin(current, currsch));
+            candidates.add(makeNestedLoopsJoin(current, currsch));
+            break;
+         default:
+            throw new IllegalArgumentException("Unknown join mode: " + mode);
+      }
 
       // Pick the cheapest one
       Plan bestplan = null;

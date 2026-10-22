@@ -1,6 +1,6 @@
 package simpledb.index.btree;
 
-import static java.sql.Types.INTEGER;
+import static java.sql.Types.*;
 import simpledb.file.BlockId;
 import simpledb.tx.Transaction;
 import simpledb.record.*;
@@ -126,14 +126,31 @@ public class BTPage {
    }
    
    private void makeDefaultRecord(BlockId blk, int pos) {
-      for (String fldname : layout.schema().fields()) {
-         int offset = layout.offset(fldname);
-         if (layout.schema().type(fldname) == INTEGER)
-            tx.setInt(blk, pos + offset, 0, false);
-         else
-            tx.setString(blk, pos + offset, "", false);
-      }
-   }
+	    Schema schema = layout.schema();
+
+	    for (String fldname : schema.fields()) {
+	        int fieldPos = pos + layout.offset(fldname);
+
+	        switch (schema.type(fldname)) {
+	            case INTEGER:
+	                tx.setInt(blk, fieldPos, 0, false);
+	                break;
+
+	            case REAL:
+	                tx.setFloat(blk, fieldPos, 0.0f, false);
+	                break;
+
+	            case VARCHAR:
+	                tx.setString(blk, fieldPos, "", false);
+	                break;
+
+	            default:
+	                throw new IllegalArgumentException(
+	                    "Unsupported field type"
+	                );
+	        }
+	    }
+	}
    // Methods called only by BTreeDir
    
    /**
@@ -208,6 +225,11 @@ public class BTPage {
       return tx.getInt(currentblk, pos);
    }
    
+   private float getFloat(int slot, String fldname) {
+	   int pos = fldpos(slot, fldname);
+	   return tx.getFloat(currentblk, pos);
+   }
+   
    private String getString(int slot, String fldname) {
       int pos = fldpos(slot, fldname);
       return tx.getString(currentblk, pos);
@@ -217,13 +239,21 @@ public class BTPage {
       int type = layout.schema().type(fldname);
       if (type == INTEGER)
          return new Constant(getInt(slot, fldname));
-      else
-         return new Constant(getString(slot, fldname));
+      else if (type == REAL) {
+    	 return new Constant(getFloat(slot, fldname));
+      } else {
+    	 return new Constant(getString(slot, fldname)); 
+      }
    }
    
    private void setInt(int slot, String fldname, int val) {
       int pos = fldpos(slot, fldname);
       tx.setInt(currentblk, pos, val, true);
+   }
+   
+   private void setFloat(int slot, String fldname, float val) {
+	   int pos = fldpos(slot, fldname);
+	   tx.setFloat(currentblk, pos, val, true);
    }
    
    private void setString(int slot, String fldname, String val) {
@@ -235,8 +265,11 @@ public class BTPage {
       int type = layout.schema().type(fldname);
       if (type == INTEGER)
          setInt(slot, fldname, val.asInt());
-      else
+      else if (type == REAL) {
+    	  setFloat(slot, fldname, val.asFloat());
+      } else {
          setString(slot, fldname, val.asString());
+      }
    }
    
    private void setNumRecs(int n) {

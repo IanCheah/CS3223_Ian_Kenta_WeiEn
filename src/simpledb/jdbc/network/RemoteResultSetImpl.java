@@ -60,11 +60,25 @@ class RemoteResultSetImpl extends UnicastRemoteObject implements RemoteResultSet
          throw e;
       }
    }
+   
+   /**
+    * Returns the float value of the specified field,
+    * by returning the corresponding value on the saved scan.
+    * @see simpledb.jdbc.network.RemoteResultSet#getFloat(java.lang.String)
+    */
+   public float getFloat(String fldname) throws RemoteException {
+	    try {
+	        return s.getVal(fldname.toLowerCase()).asFloat();
+	    } catch (RuntimeException e) {
+	        rconn.rollback();
+	        throw e;
+	    }
+	}
 
    /**
-    * Returns the integer value of the specified field,
+    * Returns the string value of the specified field,
     * by returning the corresponding value on the saved scan.
-    * @see simpledb.jdbc.network.RemoteResultSet#getInt(java.lang.String)
+    * @see simpledb.jdbc.network.RemoteResultSet#getString(java.lang.String)
     */
    public String getString(String fldname) throws RemoteException {
 		try {
