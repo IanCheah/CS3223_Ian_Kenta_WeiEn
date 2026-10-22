@@ -133,6 +133,17 @@ public class Transaction {
    }
    
    /**
+    * Return the float value stored at the
+    * specified offset of the specified block.
+    * @param blk a reference to a disk block
+    * @param offset the byte offset within the block
+    * @return the float stored at that offset
+    */
+   public Float getFloat(BlockId blk, int offset) {
+	   return Float.intBitsToFloat(getInt(blk, offset));
+   }
+   
+   /**
     * Store an integer at the specified offset 
     * of the specified block.
     * The method first obtains an XLock on the block.
@@ -154,6 +165,10 @@ public class Transaction {
       Page p = buff.contents();
       p.setInt(offset, val);
       buff.setModified(txnum, lsn);
+   }
+   
+   public void setFloat(BlockId blk, int offset, float val, boolean okToLog) {
+	   setInt(blk, offset, Float.floatToIntBits(val), okToLog);
    }
    
    /**

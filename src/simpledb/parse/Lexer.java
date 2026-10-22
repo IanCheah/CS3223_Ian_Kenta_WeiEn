@@ -1,6 +1,8 @@
 package simpledb.parse;
 
+
 import java.util.*;
+import simpledb.query.Constant;
 import java.io.*;
 /**
  * The lexical analyzer.
@@ -17,7 +19,6 @@ public class Lexer {
    public Lexer(String s) {
       initKeywords();
       tok = new StreamTokenizer(new StringReader(s));
-      tok.ordinaryChar('.');   //disallow "." in identifiers
       tok.wordChars('_', '_'); //allow "_" in identifiers
       tok.lowerCaseMode(true); //ids and keywords are converted
       nextToken();
@@ -143,12 +144,55 @@ public class Lexer {
     * @return the integer value of the current token
     */
    public int eatIntConstant() {
-      if (!matchIntConstant())
-         throw new BadSyntaxException();
-      int i = (int) tok.nval;
-      nextToken();
-      return i;
-   }
+	    if (tok.ttype != StreamTokenizer.TT_NUMBER) {
+	        throw new BadSyntaxException();
+	    }
+
+	    double number = tok.nval;
+
+	    if (!Double.isFinite(number)
+	            || number < Integer.MIN_VALUE
+	            || number > Integer.MAX_VALUE
+	            || number != Math.rint(number)) {
+	        throw new BadSyntaxException();
+	    }
+
+	    nextToken();
+	    return (int) number;
+	}
+   
+   /**
+    * Throws an exception if the current token is not 
+    * a numeric value. 
+    * Otherwise, returns that numeric value and moves to the next token.
+    * @return the numeric value of the current token
+    */
+   public Constant eatNumericConstant() {
+	    if (tok.ttype != StreamTokenizer.TT_NUMBER) {
+	        throw new BadSyntaxException();
+	    }
+
+	    double number = tok.nval;
+	    nextToken();
+
+	    if (!Double.isFinite(number)) {
+	        throw new BadSyntaxException();
+	    }
+
+	    if (number >= Integer.MIN_VALUE
+	            && number <= Integer.MAX_VALUE
+	            && number == Math.rint(number)) {
+	        return new Constant((int) number);
+	    }
+
+	    float value = (float) number;
+
+	    if (!Float.isFinite(value)) {
+	        throw new BadSyntaxException();
+	    }
+
+	    return new Constant(value);
+	}
    
    /**
     * Throws an exception if the current token is not 
@@ -203,7 +247,7 @@ public class Lexer {
    private void initKeywords() {
       keywords = Arrays.asList("select", "from", "where", "and",
                                "insert", "into", "values", "delete", "update", "set", 
-                               "create", "table", "int", "varchar", "view", "as", "index", "on",
+                               "create", "table", "int", "float", "varchar", "view", "as", "index", "on",
                                "using", "order", "by", "asc", "desc",
                                "distinct", "group", "sum", "count", "avg", "min", "max");
    }

@@ -38,6 +38,14 @@ public class Schema {
    }
    
    /**
+    * Add a float field to the schema.
+    * @param fldname the name of the field
+    */
+   public void addFloatField(String fldname) {
+	   addField(fldname, REAL, 0);
+   }
+   
+   /**
     * Add a string field to the schema.
     * The length is the conceptual length of the field.
     * For example, if the field is defined as varchar(8),

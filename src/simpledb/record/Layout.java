@@ -76,11 +76,16 @@ public class Layout {
    }
 
    private int lengthInBytes(String fldname) {
-      int fldtype = schema.type(fldname);
-      if (fldtype == INTEGER)
-         return Integer.BYTES;
-      else // fldtype == VARCHAR
-         return Page.maxLength(schema.length(fldname));
+	   switch (schema.type(fldname)) {
+       case INTEGER:
+           return Integer.BYTES;
+       case REAL:
+           return Float.BYTES;
+       case VARCHAR:
+           return Page.maxLength(schema.length(fldname));
+       default:
+           throw new IllegalArgumentException("Unsupported field type: " + schema.type(fldname));
+	   }
    }
 }
 

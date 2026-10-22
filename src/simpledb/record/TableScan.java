@@ -1,6 +1,6 @@
 package simpledb.record;
 
-import static java.sql.Types.INTEGER;
+import static java.sql.Types.*;
 import simpledb.file.BlockId;
 import simpledb.query.*;
 import simpledb.tx.Transaction;
@@ -53,10 +53,16 @@ public class TableScan implements UpdateScan {
    }
 
    public Constant getVal(String fldname) {
-      if (layout.schema().type(fldname) == INTEGER)
-         return new Constant(getInt(fldname));
-      else
-         return new Constant(getString(fldname));
+	   switch (layout.schema().type(fldname)) {
+       case INTEGER:
+           return new Constant(getInt(fldname));
+       case REAL:
+           return new Constant(rp.getFloat(currentslot, fldname));
+       case VARCHAR:
+           return new Constant(getString(fldname));
+       default:
+           throw new IllegalArgumentException("Unsupported field type");
+	   }
    }
 
    public boolean hasField(String fldname) {
@@ -79,10 +85,23 @@ public class TableScan implements UpdateScan {
    }
 
    public void setVal(String fldname, Constant val) {
-      if (layout.schema().type(fldname) == INTEGER)
-         setInt(fldname, val.asInt());
-      else
-         setString(fldname, val.asString());
+	   switch (layout.schema().type(fldname)) {
+       case INTEGER:
+           setInt(fldname, val.asInt());
+           break;
+       case REAL:
+           float value = val.asFloat();
+           if (!Float.isFinite(value)) {
+               throw new IllegalArgumentException("Float overflow");
+           }
+           rp.setFloat(currentslot, fldname, value == 0.0f ? 0.0f : value);
+           break;
+       case VARCHAR:
+           setString(fldname, val.asString());
+           break;
+       default:
+           throw new IllegalArgumentException("Unsupported field type");
+   }
    }
 
    public void insert() {

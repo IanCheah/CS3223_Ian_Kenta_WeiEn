@@ -43,7 +43,7 @@ public class HashIndex implements Index {
 	public void beforeFirst(Constant searchkey) {
 		close();
 		this.searchkey = searchkey;
-		int bucket = searchkey.hashCode() % NUM_BUCKETS;
+		int bucket = Math.floorMod(searchkey.hashCode(), NUM_BUCKETS);
 		String tblname = idxname + bucket;
 		ts = new TableScan(tx, tblname, layout);
 	}

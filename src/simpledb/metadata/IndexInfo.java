@@ -123,12 +123,7 @@ public class IndexInfo {
       Schema sch = new Schema();
       sch.addIntField("block");
       sch.addIntField("id");
-      if (tblSchema.type(fldname) == INTEGER)
-         sch.addIntField("dataval");
-      else {
-         int fldlen = tblSchema.length(fldname);
-         sch.addStringField("dataval", fldlen);
-      }
+      sch.addField("dataval",tblSchema.type(fldname),tblSchema.length(fldname));
       return new Layout(sch);
    }
 }

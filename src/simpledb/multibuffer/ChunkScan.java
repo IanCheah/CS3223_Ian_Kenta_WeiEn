@@ -1,6 +1,9 @@
 package simpledb.multibuffer;
 
 import static java.sql.Types.INTEGER;
+import static java.sql.Types.REAL;
+import static java.sql.Types.VARCHAR;
+
 import java.util.*;
 import simpledb.file.BlockId;
 import simpledb.query.*;
@@ -93,10 +96,16 @@ public class ChunkScan implements Scan {
     * @see simpledb.query.Scan#getVal(java.lang.String)
     */
    public Constant getVal(String fldname) {
-      if (layout.schema().type(fldname) == INTEGER)
-         return new Constant(getInt(fldname));
-      else
-         return new Constant(getString(fldname));
+	   switch (layout.schema().type(fldname)) {
+       case INTEGER:
+           return new Constant(getInt(fldname));
+       case REAL:
+           return new Constant(rp.getFloat(currentslot, fldname));
+       case VARCHAR:
+           return new Constant(getString(fldname));
+       default:
+           throw new IllegalArgumentException("Unsupported field type");
+	   }
    }
 
   /**

@@ -1,6 +1,6 @@
 package simpledb.materialize;
 
-import static java.sql.Types.INTEGER;
+import static java.sql.Types.*;
 
 import simpledb.query.*;
 import simpledb.record.Schema;
@@ -8,7 +8,7 @@ import simpledb.record.Schema;
 public class AvgFn implements AggregationFn {
 	
 	private String fldname;
-	private long total;
+	private double total;
 	private long count;
 	
 	public AvgFn(String fldname) {
@@ -18,7 +18,7 @@ public class AvgFn implements AggregationFn {
 	
 	
 	public void reset() {
-		total = 0;
+		total = 0.0;
 		count = 0;
 	}
    
@@ -31,9 +31,9 @@ public class AvgFn implements AggregationFn {
    
    
    public void processNext(Scan s) {
-	   total = Math.addExact(total, (long) s.getInt(fldname));
-	   count++;
-   }
+	    total += s.getVal(fldname).asDouble();
+	    count++;
+	}
    
    
    public String fieldName() {
@@ -50,7 +50,7 @@ public class AvgFn implements AggregationFn {
 		   throw new IllegalStateException("Can't AVG over empty input");
 	   }
 	   
-	   return new Constant(Math.toIntExact(total / count));
+	   return new Constant((float) (total / count));
 	   
    }
    
@@ -60,12 +60,12 @@ public class AvgFn implements AggregationFn {
                "Unknown aggregate field: " + fldname
            );
        }
-       if (input.type(fldname) != INTEGER) {
+       if (input.type(fldname) != INTEGER && input.type(fldname) != REAL) {
            throw new IllegalArgumentException(
-               "Average requires an integer field: " + fldname
+               "Average requires a numeric field: " + fldname
            );
        }
-       output.addIntField(fieldName());
+       output.addFloatField(fieldName());
    }
    
    public boolean hasValueForEmptyInput() {

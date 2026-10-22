@@ -27,7 +27,7 @@ public class Parser {
       if (lex.matchStringConstant())
          return new Constant(lex.eatStringConstant());
       else
-         return new Constant(lex.eatIntConstant());
+         return lex.eatNumericConstant();
    }
    
    public Expression expression() {
@@ -327,7 +327,11 @@ public class Parser {
          lex.eatKeyword("int");
          schema.addIntField(fldname);
       }
-      else {
+      else if (lex.matchKeyword("float")) {
+    	  lex.eatKeyword("float");
+    	  schema.addFloatField(fldname);
+    	  
+      } else {
          lex.eatKeyword("varchar");
          lex.eatDelim('(');
          int strLen = lex.eatIntConstant();
