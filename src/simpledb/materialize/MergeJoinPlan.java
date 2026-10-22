@@ -58,12 +58,11 @@ public class MergeJoinPlan implements Plan {
    /**
     * Return the number of block accesses required to
     * sort both inputs and then mergejoin them.
-    * Lecture: sort(M) + sort(N) + (M + N), where sort(M) = 2M * passes.
+    * sort(M) + sort(N) + (M + N), where sort(M) = 2M * passes.
     * The inputs may be selections or joins that are pipelined into the
     * sort, so pass 0 reads them at their own cost C instead of M,
     * and every later pass works on the M pages of their output:
     * Cost = C1 + C2 + 2M * passes(M) + 2N * passes(N)
-    * (for base tables C = M, which gives the lecture formula).
     * @see simpledb.plan.Plan#blocksAccessed()
     */
    public int blocksAccessed() {
@@ -95,8 +94,8 @@ public class MergeJoinPlan implements Plan {
     * @see simpledb.plan.Plan#distinctValues(java.lang.String)
     */
    public int distinctValues(String fldname) {
-      // lecture (opt slides 65-66): V(U,A) = min(V(R1,A), V(R2,A)) for the
-      // join column A, and V(U,B) = min(||U||, V(R1,B)) for any other column B
+      // V(U,A) = min(V(R1,A), V(R2,A)) for the join column A, 
+      // and V(U,B) = min(||U||, V(R1,B)) for any other column B
       if (fldname.equals(fldname1) || fldname.equals(fldname2))
          return Math.max(1, Math.min(p1.distinctValues(fldname1), p2.distinctValues(fldname2)));
       return Math.max(1, Math.min(recordsOutput(), p1.schema().hasField(fldname) ? p1.distinctValues(fldname) : p2.distinctValues(fldname)));

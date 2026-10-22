@@ -49,7 +49,6 @@ class TablePlanner {
    
    /**
     * Constructs the cheapest select plan for the table
-    * (lecture: accessPlan(R), opt slide 45).
     * Every access path is built: a table scan, and an index select
     * for each index whose field is equated with a constant.
     * The one with the lowest estimated cost (blocks accessed) is returned.
@@ -132,8 +131,7 @@ class TablePlanner {
    
    
    // New method added for lab4 parta. Copied makeIndexJoin
-   // The selection on this table is pushed below the join (lecture: push
-   // selections down), so only the qualifying records are sorted.
+   // The selection on this table is pushed below the join, so only the qualifying records are sorted.
    private Plan makeMergeSortJoin(Plan current, Schema currsch) {
 	   for (String fldname : this.myschema.fields()) {
 		   String outerfield = this.mypred.equatesWithField(fldname);
@@ -183,26 +181,10 @@ class TablePlanner {
       return null;
    }
    
-   private Plan makeProductJoin(Plan current, Schema currsch) {
-	  System.out.println("PRODUCT JOIN");
-	  System.out.println("current: " + current);
-	  System.out.println("currsch: " + currsch);
-      Plan p = makeProductPlan(current);
-      return addJoinPred(p, currsch);
-   }
-   
    private Plan addSelectPred(Plan p) {
       Predicate selectpred = mypred.selectSubPred(myschema);
       if (selectpred != null)
          return new SelectPlan(p, selectpred);
-      else
-         return p;
-   }
-   
-   private Plan addJoinPred(Plan p, Schema currsch) {
-      Predicate joinpred = mypred.joinSubPred(currsch, myschema);
-      if (joinpred != null)
-         return new SelectPlan(p, joinpred);
       else
          return p;
    }

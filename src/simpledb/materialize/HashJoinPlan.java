@@ -33,7 +33,6 @@ public class HashJoinPlan implements Plan {
 		// Open the input first: if it is another join, it pins buffers
 		// when opened, so only count what is left afterwards
 		Scan rScan = this.r.open();
-		// Correspond to k in lecture notes
 		int partitionNum = Math.max(1, tx.availableBuffs() - 1);
 		List<TempTable> rPartitions = partition(rScan, this.r.schema(), this.field1, partitionNum, 0);
 		List<TempTable> sPartitions = partition(this.s.open(), this.s.schema(), this.field2, partitionNum, 0);
@@ -65,7 +64,7 @@ public class HashJoinPlan implements Plan {
 			TempTable s,
 			int level,
 			int partitionNum) {
-		// Each partition size should be <= B-2 according to lecture
+		// Each partition size should be <= B-2
 		int maxSize = tx.availableBuffs() - 2;
 		int rSize = numBlocks(r);
 		int sSize = numBlocks(s);
@@ -142,13 +141,12 @@ public class HashJoinPlan implements Plan {
 	
 	// -------------------- end of Open() method ---------------------
 	/**
-	 * Lecture (Grace hash join): 3(M + N) with one partitioning pass,
+	 * Grace hash join: 3(M + N) with one partitioning pass,
 	 * plus 2(M + N) for every extra (recursive) partitioning pass.
 	 * The inputs may be selections or joins that are pipelined into the
 	 * partitioning, so the first read costs C (their own cost) instead
 	 * of M, and the partitions only hold the M pages of their output:
 	 * Cost = C1 + C2 + 2 * passes * (M + N)
-	 * (for base tables C = M, which gives the lecture formula).
 	 */
 	public int blocksAccessed() {
 		int B = this.tx.availableBuffs();
@@ -177,7 +175,7 @@ public class HashJoinPlan implements Plan {
    }
    
    public int distinctValues(String fldname) {
-      // lecture (opt slides 65-66): V(U,A) = min(V(R1,A), V(R2,A)) for the
+      // V(U,A) = min(V(R1,A), V(R2,A)) for the
       // join column A, and V(U,B) = min(||U||, V(R1,B)) for any other column B
       if (fldname.equals(field1) || fldname.equals(field2))
          return Math.max(1, Math.min(r.distinctValues(field1), s.distinctValues(field2)));

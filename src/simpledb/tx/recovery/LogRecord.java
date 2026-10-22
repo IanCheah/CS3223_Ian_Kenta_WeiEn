@@ -41,20 +41,20 @@ public interface LogRecord {
    static LogRecord createLogRecord(byte[] bytes) {
       Page p = new Page(bytes);
       switch (p.getInt(0)) {
-      case CHECKPOINT: 
-         return new CheckpointRecord();
-      case START: 
-         return new StartRecord(p);
-      case COMMIT: 
-         return new CommitRecord(p);
-      case ROLLBACK: 
-         return new RollbackRecord(p);
-      case SETINT: 
-         return new SetIntRecord(p);
-      case SETSTRING: 
-         return new SetStringRecord(p);
-      default:
-         return null;
+         case CHECKPOINT:
+            return new CheckpointRecord();
+         case START:
+            return new StartRecord(p);
+         case COMMIT:
+            return new CommitRecord(p);
+         case ROLLBACK:
+            return new RollbackRecord(p);
+         case SETINT:
+            return new SetIntRecord(p);
+         case SETSTRING:
+            return new SetStringRecord(p);
+         default:
+            return null;
       }
    }
 }

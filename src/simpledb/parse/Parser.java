@@ -141,26 +141,25 @@ public class Parser {
 	   
 	   AggregationFn fn;
 	   
-	   switch (function) {
-	   		case "count":
-	   			fn = new CountFn(inputField);
-	   			break;
-	   		case "sum":
-	   			fn = new SumFn(inputField);
-	   			break;
-	   		case "max":
-	   			fn = new MaxFn(inputField);
-	   			break;
-	   		case "min":
-	   			fn = new MinFn(inputField);
-	   			break;
-	   		case "avg":
-	   			fn = new AvgFn(inputField);
-	   			break;
-	   		default:
-	   			throw new BadSyntaxException();		
-		   
-	   }
+      switch (function) {
+         case "count":
+            fn = new CountFn(inputField);
+            break;
+         case "sum":
+            fn = new SumFn(inputField);
+            break;
+         case "max":
+            fn = new MaxFn(inputField);
+            break;
+         case "min":
+            fn = new MinFn(inputField);
+            break;
+         case "avg":
+            fn = new AvgFn(inputField);
+            break;
+         default:
+            throw new BadSyntaxException();
+      }
 	   
 	   // Making sure you dont count the same aggregate twice
 	   

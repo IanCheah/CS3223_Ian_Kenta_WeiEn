@@ -43,11 +43,10 @@ class StatMgr {
       if (numcalls > 100)
          refreshStatistics(tx);
       StatInfo si = tablestats.get(tblname);
-      // the table grew or shrank since the stats were taken, so they are stale
+      // recount if there are no stats yet, or the table grew or shrank
+      // since they were taken (so they are stale)
       Integer filesize = filesizes.get(tblname);
-      if (si != null && (filesize == null || filesize != tx.size(tblname + ".tbl")))
-         si = null;
-      if (si == null) {
+      if (si == null || filesize == null || filesize != tx.size(tblname + ".tbl")) {
          si = calcTableStats(tblname, layout, tx);
          tablestats.put(tblname, si);
       }

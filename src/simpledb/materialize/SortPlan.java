@@ -79,7 +79,7 @@ public class SortPlan implements Plan {
    }
 
    /**
-    * External merge sort cost from lecture, for N pages:
+    * External merge sort cost for N pages:
     * 2N * (1 + ceil(log_{B-1}(ceil(N/B))))
     * where B is the number of available buffers.
     */

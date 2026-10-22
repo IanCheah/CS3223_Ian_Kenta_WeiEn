@@ -90,38 +90,38 @@ public class Lexer {
 	   char first = (char) tok.ttype;
 	   this.nextToken();
 	   
-	   switch (first) {
-	   case '=':
-		   if (this.matchOpr()) {
-			   throw new BadSyntaxException();
-		   }
-		   return "=";
-	   case '<':
-		   if (this.matchDelim('=')) {
-			   this.nextToken();
-			   return "<=";
-		   } else if (this.matchDelim('>')) {
-			   this.nextToken();
-			   return "<>";
-		   } else if (this.matchOpr()) {
-			   throw new BadSyntaxException();
-		   }
-		   return "<";
-	   case '>':
-		   if (this.matchDelim('=')) {
-			   this.nextToken();
-			   return ">=";
-		   } else if (this.matchOpr()) {
-			   throw new BadSyntaxException();
-		   }
-		   return ">";
-	   default:
-		   if (this.matchDelim('=')) {
-			   this.nextToken();
-			   return "!=";
-		   }
-		   throw new BadSyntaxException();
-	   }
+      switch (first) {
+         case '=':
+            if (this.matchOpr()) {
+               throw new BadSyntaxException();
+            }
+            return "=";
+         case '<':
+            if (this.matchDelim('=')) {
+               this.nextToken();
+               return "<=";
+            } else if (this.matchDelim('>')) {
+               this.nextToken();
+               return "<>";
+            } else if (this.matchOpr()) {
+               throw new BadSyntaxException();
+            }
+            return "<";
+         case '>':
+            if (this.matchDelim('=')) {
+               this.nextToken();
+               return ">=";
+            } else if (this.matchOpr()) {
+               throw new BadSyntaxException();
+            }
+            return ">";
+         default:
+            if (this.matchDelim('=')) {
+               this.nextToken();
+               return "!=";
+            }
+            throw new BadSyntaxException();
+      }
    }
    
    /**
