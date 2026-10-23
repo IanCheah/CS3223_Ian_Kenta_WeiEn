@@ -94,8 +94,6 @@ public class MergeJoinPlan implements Plan {
     * @see simpledb.plan.Plan#distinctValues(java.lang.String)
     */
    public int distinctValues(String fldname) {
-      // V(U,A) = min(V(R1,A), V(R2,A)) for the join column A, 
-      // and V(U,B) = min(||U||, V(R1,B)) for any other column B
       if (fldname.equals(fldname1) || fldname.equals(fldname2))
          return Math.max(1, Math.min(p1.distinctValues(fldname1), p2.distinctValues(fldname2)));
       return Math.max(1, Math.min(recordsOutput(), p1.schema().hasField(fldname) ? p1.distinctValues(fldname) : p2.distinctValues(fldname)));

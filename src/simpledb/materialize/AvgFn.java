@@ -6,7 +6,7 @@ import simpledb.query.*;
 import simpledb.record.Schema;
 
 /**
- * The <i>average</i> aggregation function.
+ * Computes the averag of a specific field.
  * 
  */
 public class AvgFn implements AggregationFn {
@@ -38,8 +38,7 @@ public class AvgFn implements AggregationFn {
    }
    
    /**
-    * Adds the current record's numeric value to the running total and
-    * increments the record count.
+    * Adds the current record's value to the running total.
     *
     * @param s the scan positioned on the record to process
     */
@@ -59,10 +58,9 @@ public class AvgFn implements AggregationFn {
    
    
    /**
-    * Returns the running total divided by the number of processed
-    * records, converted to a float.
+    * Returns the current average.
     *
-    * @return the arithmetic mean as a float constant
+    * @return the average as a float constant.
     * @throws IllegalStateException if no records have been processed
     */
    public Constant value() {

@@ -48,9 +48,8 @@ public interface AggregationFn {
    Constant value();
    
    /**
-    * Validates the input field and adds the aggregate output field to the result schema.
-    * Implementations may also use the input type to configure evaluation. Call this
-    * method before accumulating values.
+    * Validates the input field, configures evaluation, and appends the result field to the output schema.
+    * Must be called before accumulating values.
     *
     * @param input the schema of the rows being aggregated
     * @param output the schema to receive the aggregate result field
@@ -60,7 +59,7 @@ public interface AggregationFn {
    
    
    /**
-    * Returns true if this function has a defined value for zero input rows (like COUNT returning 0)
+    * Returns true if this function has a defined value for zero input rows
     */
    boolean hasValueForEmptyInput();
 }

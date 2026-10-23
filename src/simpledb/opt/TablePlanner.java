@@ -48,10 +48,7 @@ class TablePlanner {
    }
    
    /**
-    * Constructs the cheapest select plan for the table
-    * Every access path is built: a table scan, and an index select
-    * for each index whose field is equated with a constant.
-    * The one with the lowest estimated cost (blocks accessed) is returned.
+    * Chooses the cheapest selection plan using a table scan or an index.
     * @return a select plan for the table.
     */
    public Plan makeSelectPlan() {
@@ -80,11 +77,7 @@ class TablePlanner {
    }
    
    /**
-    * Constructs a join plan of the specified plan
-    * and the table.  Every join algorithm that applies
-    * is built, and the one with the lowest estimated
-    * cost (blocks accessed) is returned.
-    * The method returns null if no join is possible.
+    * Chooses the cheapest join allowed by the configured join mode.
     * @param current the specified plan
     * @return a join plan of the plan and this table
     */

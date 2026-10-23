@@ -10,8 +10,8 @@ import simpledb.query.Scan;
 import simpledb.record.Schema;
 
 /**
- * Scans final hash-join partition pairs by building an in-memory table for one side and probing the other.
- * Retains every matching build row so duplicate join keys produce all matching pairs.
+ * Joins each partition pair using an in-memory hash table.
+ * Returns all matching row pairs, including those with duplicate keys.
  */
 public class HashJoinScan implements Scan {
 	private List<TempTable> rParts;
@@ -69,6 +69,10 @@ public class HashJoinScan implements Scan {
 		this.matchIdx = -1;
 	}
 	
+	/**
+	 * Advances to the next matching row pair across the partitions.
+	 * Returns false when no matches remain.
+	 */
 	public boolean next() {
 		while (true) {
 			if (this.currMatches != null && this.matchIdx + 1 < currMatches.size()) {
@@ -91,12 +95,7 @@ public class HashJoinScan implements Scan {
 		}
 	}
 	
-	/**
-	 * Closes the previous probe scan, builds the hash table for the next partition pair,
-	 * and opens its probe scan. Clears the current match state.
-	 *
-	 * @return true if another pair was loaded, or false if all pairs are exhausted
-	 */
+	// Build the next pair's hash table and open its probe scan.
 	private boolean loadNextPair() {
 		// close the probeCursor
 		if (probeCursor != null) {
@@ -145,8 +144,6 @@ public class HashJoinScan implements Scan {
 		
 		return true;
 	}
-	
-	// ------------------- end of next() ---------------------------------
 	
 	public Constant getVal(String fldname) {
 		Map<String, Constant> buildRow = this.currMatches.get(matchIdx);

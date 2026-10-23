@@ -13,9 +13,8 @@ import simpledb.tx.Transaction;
 import simpledb.record.Schema;
 
 /**
- * Plans an equality join by recursively partitioning both inputs into temporary tables.
- * Chooses a build side for each final partition pair and opens a {@link HashJoinScan}.
- * The recursion limit bounds repartitioning even when skew prevents a partition from shrinking.
+ * Plans an equality join using hash partitions.
+ * Large partitions are recursively partitioned up to a fixed recursion limit.
  */
 public class HashJoinPlan implements Plan {
 	private static final int MAX_LEVEL = 3;
@@ -25,7 +24,7 @@ public class HashJoinPlan implements Plan {
 	private Schema schema = new Schema();
 	
 	/**
-	 * Creates a partition-based hash join plan for two equality join fields.
+	 * Creates a plan to join r and s on field1 = field2.
 	 *
 	 * @param tx the transaction used for temporary tables and scans
 	 * @param r the left input plan
@@ -45,10 +44,7 @@ public class HashJoinPlan implements Plan {
 	}
 	
 	/**
-	 * Partitions both inputs into temporary tables by hashing their join fields,
-	 * repartitioning any partition pair where neither side fits in the available
-	 * buffers (up to MAX_LEVEL levels), and returns a scan that joins the partition pairs.
-	 * @see simpledb.plan.Plan#open()
+	 * Partitions both inputs and opens a scan over the joines partitions.
 	 */
 	public Scan open() {
 		// Open the input first: if it is another join, it pins buffers
@@ -77,18 +73,7 @@ public class HashJoinPlan implements Plan {
 		return new HashJoinScan(rPartsFinal, sPartsFinal, shouldBuildLeft, this.field1, this.field2);
 	}
 	
-	/**
-	 * Repartitions a pair until one side fits the available block budget or the recursion limit is exceeded.
-	 * Appends final partition pairs and their smaller build sides to the output lists.
-	 *
-	 * @param rPartsFinal the output list of final left partitions
-	 * @param sPartsFinal the output list of corresponding right partitions
-	 * @param shouldBuildLeft the output build-side flags; true selects the left partition
-	 * @param r the current left partition
-	 * @param s the current right partition
-	 * @param level the current recursion level
-	 * @param partitionNum the number of buckets used for repartitioning
-	 */
+	// Repartition until one side fits the buffer budget or the recursion limit is reached.
 	private void recursivePartition(
 			List<TempTable> rPartsFinal, 
 			List<TempTable> sPartsFinal,
@@ -128,17 +113,7 @@ public class HashJoinPlan implements Plan {
 		}
 	}
 	
-	/**
-	 * Copies input rows into temporary tables selected by a level-dependent hash of the join field.
-	 * Closes the input scan and partition output scans on normal completion.
-	 *
-	 * @param cursor the input scan to consume
-	 * @param schema the schema copied to each partition
-	 * @param field the field used to choose a partition
-	 * @param partitionNum the number of partitions to create
-	 * @param level the level that determines which part of the hash is used
-	 * @return the temporary partitions in bucket order
-	 */
+	// Distribute rows into temporary partitions.
 	private List<TempTable> partition(Scan cursor, Schema schema, String field, int partitionNum, int level) {
 		List<TempTable> result = new ArrayList<>();
 		List<UpdateScan> writableResult = new ArrayList<>();
@@ -179,18 +154,16 @@ public class HashJoinPlan implements Plan {
 		return (int) (hashCode % partitionNum);
 	}
 	
+	// Return the number of blocks used by a temporary table.
 	private int numBlocks(TempTable t) {
 		return this.tx.size(t.tableName() + ".tbl");
 	}
 	
 	// -------------------- end of Open() method ---------------------
 	/**
-	 * Grace hash join: 3(M + N) with one partitioning pass,
-	 * plus 2(M + N) for every extra (recursive) partitioning pass.
-	 * The inputs may be selections or joins that are pipelined into the
-	 * partitioning, so the first read costs C (their own cost) instead
-	 * of M, and the partitions only hold the M pages of their output:
-	 * Cost = C1 + C2 + 2 * passes * (M + N)
+	 * Estimates disk I/O from the input costs and number of partitioning passes.
+	 * Each pass adds a write and a read of both inputs:
+	 * C1 + C2 + 2 * passes * (M + N).
 	 */
 	public int blocksAccessed() {
 		int B = this.tx.availableBuffs();
@@ -207,12 +180,10 @@ public class HashJoinPlan implements Plan {
 		return (int) Math.min(Integer.MAX_VALUE, C1 + C2 + 2L * numPasses * (M + N));
 	}
 
-   /**
-    * Estimates the number of records in the join.
-    * Assuming uniform distribution, the formula is:
-    * <pre> R(join(r,s)) = R(r)*R(s)/max{V(r,F1),V(s,F2)}</pre>
-    * @see simpledb.plan.Plan#recordsOutput()
-    */
+	/**
+	 * Estimates the join size, assuming uniformly distributed values:
+	 * R(r) * R(s) / max(V(r, field1), V(s, field2)).
+	 */
    public int recordsOutput() {
 	    int maxvals = Math.max(this.r.distinctValues(field1),
 	                           this.s.distinctValues(field2));
@@ -225,10 +196,9 @@ public class HashJoinPlan implements Plan {
    }
    
    /**
-    * Estimates the distinct number of field values in the join:
-    * the smaller of the two inputs' values for the join field,
-    * otherwise the input's value capped by the number of output records.
-    * @see simpledb.plan.Plan#distinctValues(java.lang.String)
+    * Estimates the number of distinct values in an output field.
+    * Uses the smaller distinct count for join fields; otherwise, caps
+    * the input's distinct count at the estimated output size.
     */
    public int distinctValues(String fldname) {
       // V(U,A) = min(V(R1,A), V(R2,A)) for the

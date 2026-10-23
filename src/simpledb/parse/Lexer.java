@@ -24,8 +24,6 @@ public class Lexer {
       nextToken();
    }
    
-//Methods to check the status of the current token
-   
    /**
     * Returns true if the current token is
     * the specified delimiter character.
@@ -78,7 +76,6 @@ public class Lexer {
 	   return this.matchDelim('=') || this.matchDelim('<') || this.matchDelim('>') || this.matchDelim('!');
    }
    
-//Methods to "eat" the current token
    /**
     * Process the current operator and move on to the next one
     * @return the string value of the operator
