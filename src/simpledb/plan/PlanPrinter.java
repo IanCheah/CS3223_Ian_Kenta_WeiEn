@@ -23,6 +23,13 @@ import java.util.List;
  */
 public class PlanPrinter {
 
+	/**
+	 * Formats a plan as numbered operator steps followed by its total estimated block-access cost.
+	 * Base tables are named as inputs rather than emitted as separate steps.
+	 *
+	 * @param p the root plan to describe
+	 * @return the formatted plan text
+	 */
    public static String toSteps(Plan p) {
       List<String> steps = new ArrayList<>();
       addSteps(p, steps);

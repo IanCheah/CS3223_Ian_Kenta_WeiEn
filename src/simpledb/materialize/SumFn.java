@@ -13,6 +13,10 @@ public class SumFn implements AggregationFn {
 	private boolean isFloat;
 	private boolean seen;
 	
+	/**
+	 * Create a sum aggregation function for the specified field.
+	 * @param fldname the name of the aggregated field
+	 */
 	public SumFn(String fldname) {
 		this.fldname = fldname;
 	}
@@ -33,6 +37,14 @@ public class SumFn implements AggregationFn {
    }
    
    
+   /**
+    * Adds the current record's field value to the running total.
+    *
+    * The configured input type determines whether integer or
+    * floating-point accumulation is used.
+    *
+    * @param s the scan positioned on the record to process
+    */
    public void processNext(Scan s) {
 	    Constant value = s.getVal(fldname);
 
@@ -56,7 +68,13 @@ public class SumFn implements AggregationFn {
 	   return fldname;
    }
    
-   
+   /**
+    * Returns the current sum using the configured input type.
+    *
+    * @return an integer constant for INTEGER input, or a float constant
+    *         for FLOAT input
+    * @throws IllegalStateException if no records have been processed
+    */
    public Constant value() {
 	   if (!seen) {
 		   throw new IllegalStateException("SUM over empty input");
@@ -70,6 +88,17 @@ public class SumFn implements AggregationFn {
 	   
    }
    
+   /**
+    * Validates the numeric input field, configures the accumulation type,
+    * and adds a result field with the same SQL type as the input.
+    *
+    * <p>This method must be called before processing records.
+    *
+    * @param input the schema containing the field to sum
+    * @param output the schema to receive the sum field
+    * @throws IllegalArgumentException if the field does not exist or
+    *         its type is neither INTEGER nor REAL
+    */
    public void addResultField(Schema input, Schema output) {
 	    if (!input.hasField(fldname)) {
 	        throw new IllegalArgumentException("Unknown aggregate field: " + fldname);

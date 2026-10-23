@@ -9,6 +9,11 @@ import simpledb.plan.Plan;
 import simpledb.record.Schema;
 import simpledb.tx.Transaction;
 
+/**
+ * Builds plans for UNION, UNION ALL, INTERSECT, and EXCEPT.
+ * Matches result columns by position, requires matching types, and retains the
+ * left input's field names. String result lengths accommodate either input.
+ */
 public class SetOprPlanner {
 	
 	/**

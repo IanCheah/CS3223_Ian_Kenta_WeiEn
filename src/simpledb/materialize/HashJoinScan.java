@@ -9,7 +9,10 @@ import simpledb.query.Constant;
 import simpledb.query.Scan;
 import simpledb.record.Schema;
 
-// HashJoinScan(rPartsFinal, sPartsFinal, shouldBuildLeft, this.field1, this.field2);
+/**
+ * Scans final hash-join partition pairs by building an in-memory table for one side and probing the other.
+ * Retains every matching build row so duplicate join keys produce all matching pairs.
+ */
 public class HashJoinScan implements Scan {
 	private List<TempTable> rParts;
 	private String rField;
@@ -29,6 +32,16 @@ public class HashJoinScan implements Scan {
 	private List<Map<String, Constant>> currMatches; // an entry of hash table
 	private int matchIdx;
 	
+	/**
+	 * Creates a scan over corresponding nonempty lists of final partitions.
+	 * The partition lists and build-side flags must have matching lengths.
+	 *
+	 * @param rParts the final left partitions
+	 * @param sParts the corresponding right partitions
+	 * @param shouldBuildLeft the build-side flag for each pair; true selects the left side
+	 * @param rField the left join field
+	 * @param sField the right join field
+	 */
 	public HashJoinScan(List<TempTable> rParts, List<TempTable> sParts, List<Boolean> shouldBuildLeft, String rField, String sField) {
 		this.rParts = rParts;
 		this.rField = rField;
@@ -78,6 +91,12 @@ public class HashJoinScan implements Scan {
 		}
 	}
 	
+	/**
+	 * Closes the previous probe scan, builds the hash table for the next partition pair,
+	 * and opens its probe scan. Clears the current match state.
+	 *
+	 * @return true if another pair was loaded, or false if all pairs are exhausted
+	 */
 	private boolean loadNextPair() {
 		// close the probeCursor
 		if (probeCursor != null) {

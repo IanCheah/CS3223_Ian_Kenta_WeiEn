@@ -175,6 +175,12 @@ public class Predicate {
       return null;
    }
    
+   /**
+    * Collects field references from every term in this predicate.
+    * A field referenced by multiple terms can appear more than once.
+    *
+    * @return the field references in term traversal order
+    */
    public List<String> fieldNames() {
 	   List<String> result = new ArrayList<>();
 	   for (Term t : this.terms) {

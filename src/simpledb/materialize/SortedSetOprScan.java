@@ -89,6 +89,12 @@ public class SortedSetOprScan implements Scan {
 		return false;
 	}
 	
+	/**
+	 * Compares the current left and right rows lexicographically by corresponding selected columns.
+	 * Both input scans must be positioned on valid rows.
+	 *
+	 * @return a negative value, zero, or a positive value when the left row is smaller, equal, or larger
+	 */
 	private int compare() {
 		for (int i = 0; i < leftFields.size(); i++) {
 			int res = leftScan.getVal(leftFields.get(i)).compareTo(rightScan.getVal(rightFields.get(i)));
@@ -99,6 +105,13 @@ public class SortedSetOprScan implements Scan {
 		return 0;
 	}
 	
+	/**
+	 * Copies the selected values of the current row into a positional list.
+	 *
+	 * @param scan the scan positioned on the row
+	 * @param fields the fields to copy in comparison order
+	 * @return the copied row values
+	 */
 	private List<Constant> snapshot(Scan scan, List<String> fields) {
 		List<Constant> vals = new ArrayList<>();
 		for (String field : fields) {
@@ -118,6 +131,13 @@ public class SortedSetOprScan implements Scan {
 		return true;
 	}
 	
+	/**
+	 * Advances one input past all consecutive copies of the supplied row.
+	 * Updates that input's availability flag when it reaches a different row or the end.
+	 *
+	 * @param isLeft whether to advance the left input rather than the right input
+	 * @param row the duplicate row values to skip
+	 */
 	private void advanceUntilNotEqual(boolean isLeft, List<Constant> row) {
 		if (isLeft) {
 			hasLeft = leftScan.next();

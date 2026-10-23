@@ -10,6 +10,9 @@ import simpledb.record.Schema;
  */
 public interface AggregationFn {
 	
+	/**
+	 * Clear the accumulated state before evaluating a new group
+	 */
 	void reset();
    
    /**
@@ -32,6 +35,10 @@ public interface AggregationFn {
     */
    String fieldName();
    
+   /**
+    * Return the source field consumed by this aggregate.
+    * @return the input field name
+    */
    String inputField();
    
    /**
@@ -40,6 +47,15 @@ public interface AggregationFn {
     */
    Constant value();
    
+   /**
+    * Validates the input field and adds the aggregate output field to the result schema.
+    * Implementations may also use the input type to configure evaluation. Call this
+    * method before accumulating values.
+    *
+    * @param input the schema of the rows being aggregated
+    * @param output the schema to receive the aggregate result field
+    * @throws IllegalArgumentException if the input field is missing or its type is unsupported
+    */
    void addResultField(Schema input, Schema output);
    
    

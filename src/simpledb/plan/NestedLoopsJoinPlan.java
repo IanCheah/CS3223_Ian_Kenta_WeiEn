@@ -8,11 +8,23 @@ import simpledb.record.Schema;
 import simpledb.query.NestedLoopsJoinScan;
 import simpledb.query.Predicate;
 
+/**
+ * Plans a tuple-at-a-time nested-loops join.
+ * The first input is the outer input; the second is rescanned for each outer row.
+ * The supplied predicate filters matching pairs.
+ */
 public class NestedLoopsJoinPlan implements Plan {
    private Plan p1, p2;
    private Schema schema = new Schema();
    private Predicate joinpred;
    
+   /**
+    * Creates a nested-loops join plan and combines the input schemas.
+    *
+    * @param p1 the outer input plan
+    * @param p2 the inner input plan
+    * @param joinpred the predicate evaluated for each pair of rows
+    */
    public NestedLoopsJoinPlan(Plan p1, Plan p2, Predicate joinpred) {
       this.p1 = p1;
       this.p2 = p2;
@@ -50,6 +62,12 @@ public class NestedLoopsJoinPlan implements Plan {
       return Math.max(1, Math.min(recordsOutput(), inputDistinctValues(fldname)));
    }
 
+   /**
+    * Looks up the distinct-value estimate for a field in its input plan.
+    *
+    * @param fldname the field whose estimate is requested
+    * @return the estimate from the first input containing the field, or otherwise the second input
+    */
    private int inputDistinctValues(String fldname) {
       if (p1.schema().hasField(fldname))
          return p1.distinctValues(fldname);

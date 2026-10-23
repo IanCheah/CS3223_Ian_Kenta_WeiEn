@@ -72,18 +72,38 @@ public class QueryData {
 		return pred;
 	}
 
+	/**
+	 * Returns the requested output ordering.
+	 *
+	 * @return the ordered list of sort fields
+	 */
 	public List<SortField> sortFields() {
 		return this.sortFields;
 	}
 	
+	/**
+	 * Reports whether SELECT DISTINCT was requested.
+	 *
+	 * @return true if duplicate elimination is requested
+	 */
 	public boolean isDistinct() {
 		return this.isDistinct;
 	}
 
+	/**
+	 * Returns the fields used to form aggregation groups.
+	 *
+	 * @return the grouping fields, or an empty list for no grouping fields
+	 */
 	public List<String> groupFields() {
 		return this.groupFields;
 	}
 	
+	/**
+	 * Returns the aggregate functions requested by the query.
+	 *
+	 * @return the aggregate functions
+	 */
 	public List<AggregationFn> aggFns() {
 		return this.aggFns;
 	}
