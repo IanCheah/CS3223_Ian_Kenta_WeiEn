@@ -1,6 +1,7 @@
 package simpledb.materialize;
 
 import java.util.Arrays;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,6 +12,11 @@ import simpledb.query.UpdateScan;
 import simpledb.tx.Transaction;
 import simpledb.record.Schema;
 
+/**
+ * Plans an equality join by recursively partitioning both inputs into temporary tables.
+ * Chooses a build side for each final partition pair and opens a {@link HashJoinScan}.
+ * The recursion limit bounds repartitioning even when skew prevents a partition from shrinking.
+ */
 public class HashJoinPlan implements Plan {
 	private static final int MAX_LEVEL = 3;
 	private Transaction tx;
@@ -18,6 +24,15 @@ public class HashJoinPlan implements Plan {
 	private String field1, field2;
 	private Schema schema = new Schema();
 	
+	/**
+	 * Creates a partition-based hash join plan for two equality join fields.
+	 *
+	 * @param tx the transaction used for temporary tables and scans
+	 * @param r the left input plan
+	 * @param s the right input plan
+	 * @param field1 the join field in the left input
+	 * @param field2 the join field in the right input
+	 */
 	public HashJoinPlan(Transaction tx, Plan r, Plan s, String field1, String field2) {
 		this.tx = tx;
 		this.r = r;
@@ -56,6 +71,18 @@ public class HashJoinPlan implements Plan {
 		return new HashJoinScan(rPartsFinal, sPartsFinal, shouldBuildLeft, this.field1, this.field2);
 	}
 	
+	/**
+	 * Repartitions a pair until one side fits the available block budget or the recursion limit is exceeded.
+	 * Appends final partition pairs and their smaller build sides to the output lists.
+	 *
+	 * @param rPartsFinal the output list of final left partitions
+	 * @param sPartsFinal the output list of corresponding right partitions
+	 * @param shouldBuildLeft the output build-side flags; true selects the left partition
+	 * @param r the current left partition
+	 * @param s the current right partition
+	 * @param level the current recursion level
+	 * @param partitionNum the number of buckets used for repartitioning
+	 */
 	private void recursivePartition(
 			List<TempTable> rPartsFinal, 
 			List<TempTable> sPartsFinal,
@@ -95,6 +122,17 @@ public class HashJoinPlan implements Plan {
 		}
 	}
 	
+	/**
+	 * Copies input rows into temporary tables selected by a level-dependent hash of the join field.
+	 * Closes the input scan and partition output scans on normal completion.
+	 *
+	 * @param cursor the input scan to consume
+	 * @param schema the schema copied to each partition
+	 * @param field the field used to choose a partition
+	 * @param partitionNum the number of partitions to create
+	 * @param level the level that determines which part of the hash is used
+	 * @return the temporary partitions in bucket order
+	 */
 	private List<TempTable> partition(Scan cursor, Schema schema, String field, int partitionNum, int level) {
 		List<TempTable> result = new ArrayList<>();
 		List<UpdateScan> writableResult = new ArrayList<>();

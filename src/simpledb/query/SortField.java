@@ -8,6 +8,12 @@ public class SortField {
 	private String field;
 	private boolean isAsc;
 	
+	/**
+	 * Creates a sort key with an explicit direction.
+	 *
+	 * @param field the field to sort by
+	 * @param isAsc true for ascending order, false for descending order
+	 */
 	public SortField(String field, boolean isAsc) {
 		this.field = field;
 		this.isAsc = isAsc;

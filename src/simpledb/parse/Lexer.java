@@ -253,6 +253,11 @@ public class Lexer {
                                "union", "all", "intersect", "except");
    }
    
+   /**
+    * Tests whether all input tokens have been consumed.
+    *
+    * @return true if the current token is end-of-input
+    */
    public boolean atEnd() {
 	   return this.tok.ttype == StreamTokenizer.TT_EOF;
    }

@@ -24,11 +24,10 @@ public class CountFn implements AggregationFn {
    }
    
    /**
-    * Start a new count.
+    * Start a new count by calling reset
     * Since SimpleDB does not support null values,
     * every record will be counted,
     * regardless of the field.
-    * The current count is thus set to 1.
     * @see simpledb.materialize.AggregationFn#processFirst(simpledb.query.Scan)
     */
    public void processFirst(Scan s) {
@@ -66,6 +65,14 @@ public class CountFn implements AggregationFn {
       return new Constant(count);
    }
    
+   /**
+    * Validates that the input field exists and adds an INTEGER result
+    * field to the output schema.
+    *
+    * @param input the schema containing the counted field
+    * @param output the schema to receive the count field
+    * @throws IllegalArgumentException if the input field does not exist
+    */
    public void addResultField(Schema input, Schema output) {
        if (!input.hasField(fldname)) {
            throw new IllegalArgumentException(

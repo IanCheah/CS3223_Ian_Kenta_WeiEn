@@ -153,8 +153,14 @@ class TablePlanner {
    }
    
    
-   // New method added for lab4 parta. Copied makeIndexJoin
-   // The selection on this table is pushed below the join, so only the qualifying records are sorted.
+   /**
+    * Builds a sort-merge join using an equality that connects this table to the current plan.
+    * Pushes this table's selections below the join and applies any remaining join conditions afterward.
+    *
+    * @param current the plan for the tables already joined
+    * @param currsch the schema of the current plan
+    * @return the join plan, or null if no connecting equality is found
+    */
    private Plan makeMergeSortJoin(Plan current, Schema currsch) {
 	   for (String fldname : this.myschema.fields()) {
 		   String outerfield = this.mypred.equatesWithField(fldname);
@@ -166,9 +172,14 @@ class TablePlanner {
 	   return null;
    }
 
-   // New method added for lab5
-   // Selection pushed down as in makeMergeSortJoin, so only the
-   // qualifying records are partitioned.
+   /**
+    * Builds a partition-based hash join using a connecting equality.
+    * Pushes this table's selections below the join and applies any remaining join conditions afterward.
+    *
+    * @param current the plan for the tables already joined
+    * @param currsch the schema of the current plan
+    * @return the join plan, or null if no connecting equality is found
+    */
    private Plan makeHashJoin(Plan current, Schema currsch) {
 	   for (String fldname : this.myschema.fields()) {
 		   String outerfield = this.mypred.equatesWithField(fldname);
@@ -180,7 +191,14 @@ class TablePlanner {
 	   return null;
    }
 
-   // New method added for lab4 partc.
+   /**
+    * Builds a nested-loops join using the predicate connecting this table to the current plan.
+    * Applies this table's local selections before joining.
+    *
+    * @param current the plan for the tables already joined
+    * @param currsch the schema of the current plan
+    * @return the join plan, or null if there is no connecting predicate
+    */
    private Plan makeNestedLoopsJoin(Plan current, Schema currsch) {
 	   Predicate joinpred = this.mypred.joinSubPred(myschema, currsch);
 	   if (joinpred == null)

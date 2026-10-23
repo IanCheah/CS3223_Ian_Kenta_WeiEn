@@ -32,7 +32,12 @@ public class Constant implements Comparable<Constant> {
       return ival;
    }
    
-   // Used for intermediate value calculations, database does not support double data type
+   /**
+    * Converts an integer or float constant to a double for numeric comparisons and intermediate calculations.
+    *
+    * @return the numeric value as a double
+    * @throws IllegalArgumentException if this constant is not numeric
+    */
    public double asDouble() {
 	   if (ival != null) {
 		   return ival.doubleValue();
@@ -46,10 +51,22 @@ public class Constant implements Comparable<Constant> {
 	   
    }
    
+   /**
+    * Converts an integer or float constant to a float.
+    * Converting a large integer may lose precision.
+    *
+    * @return the numeric value as a float
+    * @throws IllegalArgumentException if this constant is not numeric
+    */
    public Float asFloat() {
 	   return (float) asDouble();
    }
    
+   /**
+    * Tests whether this constant holds an integer or a float.
+    *
+    * @return true for a numeric constant
+    */
    public boolean isNumeric() {
 	   return ival != null || fval != null;
    }

@@ -71,6 +71,14 @@ public class MinFn implements AggregationFn {
 	   return val;
 	}
 	   
+	/**
+	 * Adds a minimum-result field with the input field's SQL type and
+	 * declared length, preserving string capacity where applicable.
+	 *
+	 * @param input the schema containing the aggregated field
+	 * @param output the schema to receive the minimum field
+	 * @throws IllegalArgumentException if the input field does not exist
+	 */
 	public void addResultField(Schema input, Schema output) {
 	    if (!input.hasField(fldname)) {
 	        throw new IllegalArgumentException(

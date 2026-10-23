@@ -14,6 +14,14 @@ public class SetOprData {
 	private final List<SetOpr> oprs;
 	private final List<SortField> sortFields;
 	
+	/**
+	 * Stores SELECT blocks, their connecting operations, and the final result ordering.
+	 * The lists are retained directly; callers supply one fewer operation than SELECT blocks.
+	 *
+	 * @param queries the SELECT blocks in textual order
+	 * @param oprs the operations between adjacent blocks, evaluated left to right
+	 * @param sortFields the ordering applied to the combined result
+	 */
 	public SetOprData(List<QueryData> queries, List<SetOpr> oprs, List<SortField> sortFields) {
 		this.queries = queries;
 		this.oprs = oprs;

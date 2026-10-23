@@ -167,6 +167,16 @@ public class Transaction {
       buff.setModified(txnum, lsn);
    }
    
+   /**
+    * Writes a float using its integer bit representation.
+    * Delegates to {@link #setInt(BlockId, int, int, boolean)} so the existing locking,
+    * buffering, and optional undo logging also apply to float values.
+    *
+    * @param blk the block containing the value
+    * @param offset the byte offset within the block
+    * @param val the float value to store
+    * @param okToLog whether to log the previous value for recovery
+    */
    public void setFloat(BlockId blk, int offset, float val, boolean okToLog) {
 	   setInt(blk, offset, Float.floatToIntBits(val), okToLog);
    }
