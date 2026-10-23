@@ -28,7 +28,7 @@ public class BetterQueryPlanner implements QueryPlanner {
          String viewdef = mdm.getViewDef(tblname, tx);
          if (viewdef != null) { // Recursively plan the view.
             Parser parser = new Parser(viewdef);
-            QueryData viewdata = parser.query();
+            QueryData viewdata = (QueryData) parser.query();
             plans.add(createPlan(viewdata, tx));
          }
          else

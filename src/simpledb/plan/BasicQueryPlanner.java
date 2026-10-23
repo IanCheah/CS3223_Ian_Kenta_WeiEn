@@ -2,6 +2,7 @@ package simpledb.plan;
 
 import java.util.*;
 
+
 import simpledb.tx.Transaction;
 import simpledb.materialize.*;
 import simpledb.metadata.*;
@@ -30,7 +31,7 @@ public class BasicQueryPlanner implements QueryPlanner {
          String viewdef = mdm.getViewDef(tblname, tx);
          if (viewdef != null) { // Recursively plan the view.
             Parser parser = new Parser(viewdef);
-            QueryData viewdata = parser.query();
+            QueryData viewdata = (QueryData) parser.query();
             plans.add(createPlan(viewdata, tx));
          }
          else

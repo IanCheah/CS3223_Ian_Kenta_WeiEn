@@ -249,7 +249,8 @@ public class Lexer {
                                "insert", "into", "values", "delete", "update", "set", 
                                "create", "table", "int", "float", "varchar", "view", "as", "index", "on",
                                "using", "order", "by", "asc", "desc",
-                               "distinct", "group", "sum", "count", "avg", "min", "max");
+                               "distinct", "group", "sum", "count", "avg", "min", "max",
+                               "union", "all", "intersect", "except");
    }
    
    public boolean atEnd() {

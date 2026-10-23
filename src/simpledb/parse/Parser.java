@@ -54,8 +54,70 @@ public class Parser {
    }
    
 // Methods for parsing queries
+   public Object query() {
+	   List<QueryData> queries = new ArrayList<>();
+	   List<SetOpr> oprs = new ArrayList<>();
+	   queries.add(selectQuery());
+	   
+	   while (isSetOprKeyword()) {
+		   SetOpr opr;
+		   
+		   if (lex.matchKeyword("union")) {
+			   lex.eatKeyword("union");
+			   if (lex.matchKeyword("all")) {
+				   lex.eatKeyword("all");
+				   opr = SetOpr.UNION_ALL;
+			   } else {
+				   opr = SetOpr.UNION;
+			   }
+		   } else if (lex.matchKeyword("intersect")) {
+			   lex.eatKeyword("intersect");
+			   opr = SetOpr.INTERSECT;
+		   } else {
+			   lex.eatKeyword("except");
+			   opr = SetOpr.EXCEPT;
+		   }
+
+		   // ORDER BY clause can only appear in the last QueryData
+		   QueryData prevQueryData = queries.get(queries.size() - 1);
+		   if (!prevQueryData.sortFields().isEmpty()) {
+			   throw new IllegalArgumentException("ORDER BY is only allowed in the last query");
+		   }
+		   
+		   oprs.add(opr);
+		   queries.add(selectQuery());
+	   }
+	   
+	   if (lex.matchDelim(';')) {
+		   lex.eatDelim(';');
+	   }
+	   if (!lex.atEnd()) {
+		   throw new BadSyntaxException();
+	   }
+	   
+	   if (oprs.isEmpty()) {
+		   return queries.get(0);
+	   }
+	   
+	   int lastIdx = queries.size() - 1;
+	   QueryData lastQueryData = queries.get(lastIdx);
+	   List<SortField> sortFields = lastQueryData.sortFields();
+	   QueryData newLastQueryData = new QueryData(lastQueryData.fields(),
+			   									  lastQueryData.tables(),
+			   									  lastQueryData.pred(),
+			   									  new ArrayList<SortField>(),
+			   									  lastQueryData.isDistinct(),
+			   									  lastQueryData.groupFields(),
+			   									  lastQueryData.aggFns());
+	   queries.set(lastIdx, newLastQueryData);
+	   return new SetOprData(queries, oprs, sortFields);
+   }
    
-   public QueryData query() {
+   private boolean isSetOprKeyword() {
+	   return lex.matchKeyword("union") || lex.matchKeyword("intersect") || lex.matchKeyword("except");
+   }
+   
+   private QueryData selectQuery() {
       lex.eatKeyword("select");
       
       // Lab5 - Optional DISTINCT
@@ -63,7 +125,6 @@ public class Parser {
       if (lex.matchKeyword("distinct")) {
     	  lex.eatKeyword("distinct");
     	  isDistinct = true;
-//    	  System.out.println("Distinct is " + isDistinct);
       }
       
       List<AggregationFn> aggFns = new ArrayList<>();
@@ -91,13 +152,6 @@ public class Parser {
     	  lex.eatKeyword("order");
     	  lex.eatKeyword("by");
     	  sortfields = this.sortList();
-      }
-      
-      if (lex.matchDelim(';')) {
-    	  lex.eatDelim(';');
-      }
-      if (!lex.atEnd()) {
-    	  throw new BadSyntaxException();
       }
       
       return new QueryData(
@@ -347,8 +401,11 @@ public class Parser {
       lex.eatKeyword("view");
       String viewname = lex.eatId();
       lex.eatKeyword("as");
-      QueryData qd = query();
-      return new CreateViewData(viewname, qd);
+      Object qd = query();
+      if (!(qd instanceof QueryData)) {
+    	  throw new IllegalArgumentException("Not allowed to define a view with set operation.");
+      }
+      return new CreateViewData(viewname, (QueryData) qd);
    }
    
    

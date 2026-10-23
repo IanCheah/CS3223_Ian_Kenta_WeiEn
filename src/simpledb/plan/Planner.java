@@ -1,9 +1,15 @@
 package simpledb.plan;
 
+import java.util.List;
+import java.util.ArrayList;
+
 import simpledb.tx.Transaction;
 import simpledb.parse.*;
+import simpledb.query.SortField;
 import simpledb.record.Schema;
 import simpledb.metadata.MetadataMgr;
+import simpledb.materialize.SetOprPlanner;
+import simpledb.materialize.SortPlan;
 
 /**
  * The object that executes SQL statements.
@@ -28,9 +34,39 @@ public class Planner {
     */
    public Plan createQueryPlan(String qry, Transaction tx) {
       Parser parser = new Parser(qry);
-      QueryData data = parser.query();
-      verifyQuery(data, tx);
-      return qplanner.createPlan(data, tx);
+      Object data = parser.query();
+      
+      if (data instanceof QueryData) {
+    	  verifyQuery((QueryData) data, tx);
+    	  return qplanner.createPlan((QueryData) data, tx);
+      }
+      
+      SetOprData parsedData = (SetOprData) data;
+      List<Plan> plans = new ArrayList<>();
+      for (QueryData qd : parsedData.queries()) {
+    	  verifyQuery(qd, tx);
+    	  plans.add(qplanner.createPlan(qd, tx));
+      }
+      
+      Plan result = plans.get(0);
+      List<SetOpr> oprs = parsedData.oprs();
+      for (int i = 0; i < oprs.size(); i++) {
+    	  result = SetOprPlanner.combine(tx, result, oprs.get(i), plans.get(i + 1));
+      }
+      
+      if (parsedData.sortFields() != null && !parsedData.sortFields().isEmpty()) {
+          Schema resultSchema = result.schema();
+          for (SortField sf : parsedData.sortFields()) {
+             if (!resultSchema.hasField(sf.getFieldName()))
+                throw new IllegalArgumentException(
+                      "ORDER BY field '" + sf.getFieldName() + "' is not a column of the set operation result"
+                      + " (use the column names of the first query: " + resultSchema.fields() + ")");
+          }
+          result = new SortPlan(tx, result, parsedData.sortFields());
+       }
+      
+      System.out.println("Query plan (set operation):\n" + PlanPrinter.toSteps(result));
+      return result;
    }
    
    /**
