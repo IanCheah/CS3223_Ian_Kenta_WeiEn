@@ -92,12 +92,14 @@ public class Term {
          return 1.0 / Math.max(p.distinctValues(lhsName),
                                p.distinctValues(rhsName));
       }
-      if (lhs.isFieldName()) {
-         lhsName = lhs.asFieldName();
-         return 1.0 / p.distinctValues(lhsName);
-      }
-      rhsName = rhs.asFieldName();
-      return 1.0 / p.distinctValues(rhsName);
+      String fldname = lhs.isFieldName() ? lhs.asFieldName() : rhs.asFieldName();
+      Constant val = lhs.isFieldName() ? rhs.asConstant() : lhs.asConstant();
+      Constant low = p.minValue(fldname);
+      Constant high = p.maxValue(fldname);
+      if (low != null && high != null && low.isNumeric() && val.isNumeric()
+            && (val.compareTo(low) < 0 || val.compareTo(high) > 0))
+         return 0.0;
+      return 1.0 / p.distinctValues(fldname);
    }
 
    /**
@@ -162,12 +164,15 @@ public class Term {
 
       Constant low = p.minValue(fldname);
       Constant high = p.maxValue(fldname);
-      if (low == null || high == null
-    	        || !low.isInt()
-    	        || !high.isInt()
-    	        || !val.isInt()) {
-    	    return 1.0 / 3;
-    	}
+      if (low == null || high == null || !low.isNumeric() || !val.isNumeric())
+         return 1.0 / 3;
+      if (!low.isInt() || !high.isInt() || !val.isInt()) {
+         boolean none = (op.equals(">") && val.compareTo(high) >= 0)
+               || (op.equals(">=") && val.compareTo(high) > 0)
+               || (op.equals("<") && val.compareTo(low) <= 0)
+               || (op.equals("<=") && val.compareTo(low) < 0);
+         return none ? 0.0 : 1.0 / 3;
+      }
       long lo = low.asInt(), hi = high.asInt(), c = val.asInt();
       long domain = hi - lo + 1;
       long matches;

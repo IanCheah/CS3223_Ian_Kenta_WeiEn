@@ -1,12 +1,13 @@
 package simpledb.query;
 
 /**
- * Enumerates pairs from an outer and an inner scan and returns those satisfying a join predicate.
- * The inner scan is restarted when it is exhausted for the current outer row.
+ * Returns the pairs of an outer and inner scan that satisfy a join predicate.
+ * The inner scan restarts when exhausted for the current outer row.
  */
 public class NestedLoopsJoinScan implements Scan {
    private Scan s1, s2;
    private Predicate joinpred;
+   private boolean hasOuter;
    
    /**
     * Creates a nested-loops scan and initializes the input positions.
@@ -24,7 +25,7 @@ public class NestedLoopsJoinScan implements Scan {
 
    public void beforeFirst() {
       s1.beforeFirst();
-      s1.next();
+      hasOuter = s1.next();
       s2.beforeFirst();
    }
    
@@ -38,17 +39,18 @@ public class NestedLoopsJoinScan implements Scan {
    }
    
    /**
-    * Advances to the next candidate pair, restarting the inner scan and advancing the outer scan when needed.
+    * Advances to the next candidate pair and restarts the inner scan or advances the outer scan as needed.
     *
-    * @return true if a candidate pair was reached, or {@code false} otherwise
+    * @return true if a candidate pair was reached
     */
    private boolean advance() {
+      if (!hasOuter)
+         return false;
       if (s2.next())
          return true;
-      else {
-         s2.beforeFirst();
-         return s2.next() && s1.next();
-      }
+      s2.beforeFirst();
+      hasOuter = s1.next();
+      return hasOuter && s2.next();
    }
    
    public int getInt(String fldname) {
