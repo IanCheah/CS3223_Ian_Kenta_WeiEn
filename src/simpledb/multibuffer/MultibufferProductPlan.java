@@ -54,8 +54,10 @@ public class MultibufferProductPlan implements Plan {
    /**
     * Returns an estimate of the number of block accesses
     * required to execute the query. The formula is:
-    * <pre> B(product(p1,p2)) = B(p2) + B(p1)*C(p2) </pre>
-    * where C(p2) is the number of chunks of p2.
+    * <pre> B(product(p1,p2)) = B(p1) + B(p2) + B(temp(p1))*C(p2) </pre>
+    * where B(p1) is the one-time cost of computing p1 into a
+    * temporary table, B(temp(p1)) is the size of that temporary table,
+    * which is rescanned once per chunk, and C(p2) is the number of chunks of p2.
     * The method uses the current number of available buffers
     * to calculate C(p2), and so this value may differ
     * when the query scan is opened.
@@ -120,10 +122,18 @@ public class MultibufferProductPlan implements Plan {
       return t;
    }
 
+   /**
+    * Describes this product as a step of the printed query plan.
+    * @see simpledb.plan.Plan#describe(java.util.List)
+    */
    public String describe(List<String> inputs) {
       return "Product (multibuffer): combine every row of " + inputs.get(0) + " with every row of " + inputs.get(1);
    }
 
+   /**
+    * Returns the input plans of this product, for printing the query plan.
+    * @see simpledb.plan.Plan#children()
+    */
    public List<Plan> children() {
       return Arrays.asList(unmaterializedLhs, rhs);
    }

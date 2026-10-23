@@ -63,11 +63,9 @@ public class SortPlan implements Plan {
    }
    
    /**
-    * Return the number of blocks in the sorted table,
-    * which is the same as it would be in a
-    * materialized table.
-    * It does <i>not</i> include the one-time cost
-    * of materializing and sorting the records.
+    * Return the number of block accesses required to sort the input:
+    * the cost of the input itself, plus the external merge sort
+    * cost of the pages it outputs (see sortCost).
     * @see simpledb.plan.Plan#blocksAccessed()
     */
    public int blocksAccessed() {
@@ -187,6 +185,10 @@ public class SortPlan implements Plan {
       return src.next();
    }
 
+   /**
+    * Describes this sort as a step of the printed query plan.
+    * @see simpledb.plan.Plan#describe(java.util.List)
+    */
    public String describe(List<String> inputs) {
       List<String> fields = new ArrayList<>();
       for (SortField sf : sortFields)
@@ -194,6 +196,10 @@ public class SortPlan implements Plan {
       return "Sort: sort " + inputs.get(0) + " by " + PlanPrinter.list(fields);
    }
 
+   /**
+    * Returns the input plans of this sort, for printing the query plan.
+    * @see simpledb.plan.Plan#children()
+    */
    public List<Plan> children() {
       return Arrays.asList(p);
    }

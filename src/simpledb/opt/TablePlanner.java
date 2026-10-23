@@ -71,6 +71,10 @@ class TablePlanner {
       return bestplan;
    }
    
+   /**
+    * Returns the name of the table this planner is for.
+    * @return the table name
+    */
    public String tableName() {
       return tblname;
    }

@@ -8,10 +8,10 @@ import java.util.List;
 /**
  * Prints a plan as numbered steps, in the order they are executed:
  * <pre>
- * 1. Select: keep rows of student where gradyear = 2020 (cost = 154, rows = 200)
- * 2. Hash Join: join result and enroll on sid = studentid (cost = 851, rows = 598)
- * 3. Project: output sname and grade (cost = 0, rows = 598)
- * Total cost: 1005 block accesses
+ * 1. Select: keep rows of student where gradyear = 2020 (estimated cost = 154, estimated rows = 200)
+ * 2. Hash Join: join result and enroll on sid = studentid (estimated cost = 851, estimated rows = 598)
+ * 3. Project: output sname and grade (estimated cost = 0, estimated rows = 598)
+ * Total estimated cost: 1005 block accesses
  * </pre>
  * Every operator is a step, except base tables, which are named
  * directly. A step's input is "result" if it is the previous step,
@@ -36,7 +36,7 @@ public class PlanPrinter {
       StringBuilder sb = new StringBuilder();
       for (int i = 0; i < steps.size(); i++)
          sb.append(i + 1).append(". ").append(steps.get(i)).append("\n");
-      sb.append("Total cost: ").append(p.blocksAccessed()).append(" block accesses\n");
+      sb.append("Total estimated cost: ").append(p.blocksAccessed()).append(" block accesses\n\n");
       return sb.toString();
    }
 

@@ -38,10 +38,24 @@ public class HeuristicQueryPlanner implements QueryPlanner {
       }
    }
 
+   /**
+    * Creates a heuristic query planner.
+    * @param mdm the metadata manager, used to get table stats and indexes
+    */
    public HeuristicQueryPlanner(MetadataMgr mdm) {
       this.mdm = mdm;
    }
 
+   /**
+    * Creates an optimized query plan:
+    * the cheapest left-deep join of the tables (see findBestPlan),
+    * followed by group by / aggregation, order by, projection
+    * and distinct where the query asks for them.
+    * The chosen join order and the plan steps are printed.
+    * @param data the parsed query
+    * @param tx the calling transaction
+    * @return the query plan
+    */
    public Plan createPlan(QueryData data, Transaction tx) {
       // Step 1:  Create a TablePlanner object for each mentioned table
       List<TablePlanner> tableplanners = new ArrayList<>();
@@ -52,7 +66,7 @@ public class HeuristicQueryPlanner implements QueryPlanner {
 
       // Step 2:  Find the cheapest left-deep join order with DP
       Best best = findBestPlan(tableplanners);
-      System.out.println("Best join order: " + best.order + ", cost = " + TablePlanner.cost(best.plan));
+      System.out.println("\nBest join order: " + best.order + ", estimated join cost = " + TablePlanner.cost(best.plan));
       Plan currentplan = best.plan;
 
       // Step 3: Group By

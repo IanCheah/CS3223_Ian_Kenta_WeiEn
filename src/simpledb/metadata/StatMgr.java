@@ -53,6 +53,11 @@ class StatMgr {
       return si;
    }
    
+   /**
+    * Recalculates the statistics of every table in the catalog,
+    * and resets the call counter.
+    * @param tx the calling transaction
+    */
    private synchronized void refreshStatistics(Transaction tx) {
       tablestats = new HashMap<String,StatInfo>();
       filesizes = new HashMap<String,Integer>();
@@ -68,6 +73,15 @@ class StatMgr {
       tcat.close();
    }
    
+   /**
+    * Scans the whole table to count its blocks and records, and,
+    * for each field, its number of distinct values and its lowest / highest value.
+    * Also records the table's file size, so stale stats can be detected.
+    * @param tblname the name of the table
+    * @param layout the table's layout
+    * @param tx the calling transaction
+    * @return the statistics of the table
+    */
    private synchronized StatInfo calcTableStats(String tblname,
                               Layout layout, Transaction tx) {
       int numRecs = 0;

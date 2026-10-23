@@ -35,11 +35,11 @@ public class Term {
    }
    
    /**
-    * Return true if both of the term's expressions
-    * evaluate to the same constant,
+    * Return true if the term's comparison
+    * (=, !=, <>, <, <=, > or >=) holds between its two expressions,
     * with respect to the specified scan.
     * @param s the scan
-    * @return true if both expressions have the same value in the scan
+    * @return true if the comparison holds for the current record of the scan
     */
    public boolean isSatisfied(Scan s) {
       Constant lhsval = lhs.evaluate(s);
@@ -64,11 +64,11 @@ public class Term {
    }
    
    /**
-    * Calculate the fraction of records that satisfy the term
-    * selectivity, e.g. 0.5 if the term keeps half the records.
+    * Calculate the selectivity of the term: the fraction of records
+    * that satisfy it, e.g. 0.5 if the term keeps half the records.
     * F = c: 1/V(F); F1 = F2: 1/max(V(F1), V(F2)); F != c: 1 - 1/V(F);
     * range terms: see rangeSelectivity.
-    * c1 op c2: 1 or 0, since it is either true or false for every record.
+    * c1 op c2: see constantSelectivity.
     * @param p the query's plan
     * @return the selectivity, between 0 and 1
     */
@@ -258,6 +258,9 @@ public class Term {
 	   return result;
    }
    
+   /**
+    * Returns the term as SQL text, e.g. "gradyear = 2020".
+    */
    public String toString() {
       return lhs.toString() + " " + this.opr + " " + rhs.toString();
    }
