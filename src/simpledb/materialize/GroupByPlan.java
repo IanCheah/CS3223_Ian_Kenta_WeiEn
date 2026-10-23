@@ -118,6 +118,10 @@ public class GroupByPlan implements Plan {
       return sch;
    }
 
+   /**
+    * Describes this group by (or aggregate / distinct) as a step of the printed query plan.
+    * @see simpledb.plan.Plan#describe(java.util.List)
+    */
    public String describe(List<String> inputs) {
       // e.g. "countofsid" is shown as "count(sid)"
       List<String> aggs = new ArrayList<>();
@@ -135,6 +139,10 @@ public class GroupByPlan implements Plan {
             + " and compute " + PlanPrinter.list(aggs);
    }
 
+   /**
+    * Returns the input plans of this group by (or aggregate / distinct), for printing the query plan.
+    * @see simpledb.plan.Plan#children()
+    */
    public List<Plan> children() {
       return Arrays.asList(p);
    }

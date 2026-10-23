@@ -67,6 +67,10 @@ public class Expression {
       return (val != null) ? true : sch.hasField(fldname);
    }
    
+   /**
+    * Returns the expression as SQL text: the field name,
+    * or the constant (with string constants quoted).
+    */
    public String toString() {
       if (val == null)
          return fldname;

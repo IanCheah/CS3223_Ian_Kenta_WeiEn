@@ -87,10 +87,18 @@ public class MaterializePlan implements Plan {
       return srcplan.schema();
    }
 
+   /**
+    * Describes this materialization as a step of the printed query plan.
+    * @see simpledb.plan.Plan#describe(java.util.List)
+    */
    public String describe(List<String> inputs) {
       return "Materialize: save " + inputs.get(0) + " to a temporary table";
    }
 
+   /**
+    * Returns the input plans of this materialization, for printing the query plan.
+    * @see simpledb.plan.Plan#children()
+    */
    public List<Plan> children() {
       return Arrays.asList(srcplan);
    }

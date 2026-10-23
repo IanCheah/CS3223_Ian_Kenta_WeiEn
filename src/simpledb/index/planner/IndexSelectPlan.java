@@ -71,10 +71,18 @@ public class IndexSelectPlan implements Plan {
       return ii.distinctValues(fldname);
    }
 
+   /**
+    * Returns the lowest value of the field, as in the underlying table.
+    * @see simpledb.plan.Plan#minValue(java.lang.String)
+    */
    public Constant minValue(String fldname) {
       return p.minValue(fldname);
    }
 
+   /**
+    * Returns the highest value of the field, as in the underlying table.
+    * @see simpledb.plan.Plan#maxValue(java.lang.String)
+    */
    public Constant maxValue(String fldname) {
       return p.maxValue(fldname);
    }
@@ -87,11 +95,19 @@ public class IndexSelectPlan implements Plan {
       return p.schema(); 
    }
 
+   /**
+    * Describes this index select as a step of the printed query plan.
+    * @see simpledb.plan.Plan#describe(java.util.List)
+    */
    public String describe(List<String> inputs) {
       return "Index Select: fetch rows of " + inputs.get(0) + " where " + ii.fieldName() + " = "
             + new Expression(val) + " using the " + ii.indexType() + " index";
    }
 
+   /**
+    * Returns the input plans of this index select, for printing the query plan.
+    * @see simpledb.plan.Plan#children()
+    */
    public List<Plan> children() {
       return Arrays.asList(p);
    }

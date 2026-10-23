@@ -92,12 +92,20 @@ public class IndexJoinPlan implements Plan {
       return sch;
    }
 
+   /**
+    * Describes this index join as a step of the printed query plan.
+    * @see simpledb.plan.Plan#describe(java.util.List)
+    */
    public String describe(List<String> inputs) {
       return "Index Join: for each row of " + inputs.get(0) + ", look up the matching " + inputs.get(1)
             + " rows using the " + ii.indexType() + " index on " + ii.fieldName()
             + " (" + joinfield + " = " + ii.fieldName() + ")";
    }
 
+   /**
+    * Returns the input plans of this index join, for printing the query plan.
+    * @see simpledb.plan.Plan#children()
+    */
    public List<Plan> children() {
       return Arrays.asList(p1, p2);
    }

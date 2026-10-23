@@ -33,26 +33,47 @@ public class NestedLoopsJoinPlan implements Plan {
       schema.addAll(p2.schema());
    }
 	   
+   /**
+    * Opens a nested-loops join scan over the two inputs.
+    * @see simpledb.plan.Plan#open()
+    */
    public Scan open() {
       Scan s1 = this.p1.open();
       Scan s2 = p2.open();
       return new NestedLoopsJoinScan(s1, s2, this.joinpred);
    }
    
+   /**
+    * Estimates the number of block accesses for the join.
+    * The scan is tuple-at-a-time, so the formula is:
+    * <pre> B(join(p1,p2)) = B(p1) + R(p1)*B(p2) </pre>
+    * @see simpledb.plan.Plan#blocksAccessed()
+    */
    public int blocksAccessed() {
 	  // the scan is tuple-at-a-time: the inner is rescanned for every outer record
 	  long cost = p1.blocksAccessed() + ((long) p1.recordsOutput() * p2.blocksAccessed());
 	  return (int) Math.min(Integer.MAX_VALUE, cost);
    }
 
-   // This is just an estimate.
-   // The selectivity uses the inputs' V values (1/max(V1, V2)),
-   // not this plan's own, since those depend on recordsOutput.
+   /**
+    * Estimates the number of records in the join:
+    * R(p1) * R(p2) * selectivity of the join predicate.
+    * The selectivity uses the inputs' V values (e.g. 1/max(V1, V2)),
+    * not this plan's own, since those depend on recordsOutput.
+    * @see simpledb.plan.Plan#recordsOutput()
+    */
    public int recordsOutput() {
       double recs = (double) p1.recordsOutput() * p2.recordsOutput() * joinpred.selectivity(new ProductPlan(p1, p2));
       return (int) Math.min(Integer.MAX_VALUE, Math.round(recs));
    }
 	   
+   /**
+    * Estimates the distinct number of field values in the join:
+    * the smaller of the two fields' values if the predicate equates
+    * the field with another field, otherwise the input's value
+    * capped by the number of output records.
+    * @see simpledb.plan.Plan#distinctValues(java.lang.String)
+    */
    public int distinctValues(String fldname) {
       // V(U,A) = min(V(R1,A), V(R2,A)) for the
       // join column A, and V(U,B) = min(||U||, V(R1,B)) for any other column B
@@ -75,14 +96,27 @@ public class NestedLoopsJoinPlan implements Plan {
          return p2.distinctValues(fldname);
    }
    
+   /**
+    * Returns the schema of the join,
+    * which is the union of the schemas of the two inputs.
+    * @see simpledb.plan.Plan#schema()
+    */
    public Schema schema() {
       return schema;
    }
 
+   /**
+    * Describes this nested-loops join as a step of the printed query plan.
+    * @see simpledb.plan.Plan#describe(java.util.List)
+    */
    public String describe(List<String> inputs) {
       return "Nested-Loops Join: join " + inputs.get(0) + " and " + inputs.get(1) + " on " + joinpred;
    }
 
+   /**
+    * Returns the input plans of this nested-loops join, for printing the query plan.
+    * @see simpledb.plan.Plan#children()
+    */
    public List<Plan> children() {
       return Arrays.asList(p1, p2);
    }

@@ -57,9 +57,11 @@ public class SelectPlan implements Plan {
    
    /**
     * Estimates the number of distinct field values
-    * in the projection.
+    * in the selection.
     * If the predicate contains a term equating the specified 
     * field to a constant, then this value will be 1.
+    * If it equates the field with another field, it will be the
+    * smaller of the two fields' values in the underlying query.
     * Otherwise, it will be the number of the distinct values
     * in the underlying query 
     * (but not more than the size of the output table).
@@ -81,10 +83,18 @@ public class SelectPlan implements Plan {
       return Math.max(1, Math.min(v, recordsOutput()));
    }
 
+   /**
+    * Returns the lowest value of the field, as in the underlying query.
+    * @see simpledb.plan.Plan#minValue(java.lang.String)
+    */
    public Constant minValue(String fldname) {
       return p.minValue(fldname);
    }
 
+   /**
+    * Returns the highest value of the field, as in the underlying query.
+    * @see simpledb.plan.Plan#maxValue(java.lang.String)
+    */
    public Constant maxValue(String fldname) {
       return p.maxValue(fldname);
    }
@@ -98,10 +108,18 @@ public class SelectPlan implements Plan {
       return p.schema();
    }
 
+   /**
+    * Describes this selection as a step of the printed query plan.
+    * @see simpledb.plan.Plan#describe(java.util.List)
+    */
    public String describe(List<String> inputs) {
       return "Select: keep rows of " + inputs.get(0) + " where " + pred;
    }
 
+   /**
+    * Returns the input plans of this selection, for printing the query plan.
+    * @see simpledb.plan.Plan#children()
+    */
    public List<Plan> children() {
       return Arrays.asList(p);
    }

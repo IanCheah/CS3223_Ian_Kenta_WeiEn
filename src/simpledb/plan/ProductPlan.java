@@ -79,10 +79,18 @@ public class ProductPlan implements Plan {
       return schema;
    }
 
+   /**
+    * Describes this product as a step of the printed query plan.
+    * @see simpledb.plan.Plan#describe(java.util.List)
+    */
    public String describe(List<String> inputs) {
       return "Product: combine every row of " + inputs.get(0) + " with every row of " + inputs.get(1);
    }
 
+   /**
+    * Returns the input plans of this product, for printing the query plan.
+    * @see simpledb.plan.Plan#children()
+    */
    public List<Plan> children() {
       return Arrays.asList(p1, p2);
    }

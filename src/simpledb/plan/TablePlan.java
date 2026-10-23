@@ -64,10 +64,18 @@ public class TablePlan implements Plan {
       return si.distinctValues(fldname);
    }
 
+   /**
+    * Returns the lowest value of the field, as recorded by the statistics manager.
+    * @see simpledb.plan.Plan#minValue(java.lang.String)
+    */
    public Constant minValue(String fldname) {
       return si.minValue(fldname);
    }
 
+   /**
+    * Returns the highest value of the field, as recorded by the statistics manager.
+    * @see simpledb.plan.Plan#maxValue(java.lang.String)
+    */
    public Constant maxValue(String fldname) {
       return si.maxValue(fldname);
    }
@@ -81,6 +89,11 @@ public class TablePlan implements Plan {
       return layout.schema();
    }
 
+   /**
+    * Describes this table by its name, since base tables are
+    * named as inputs rather than printed as steps.
+    * @see simpledb.plan.Plan#describe(java.util.List)
+    */
    public String describe(List<String> inputs) {
       return tblname;
    }

@@ -44,6 +44,12 @@ public class HashJoinPlan implements Plan {
 		this.schema.addAll(s.schema());
 	}
 	
+	/**
+	 * Partitions both inputs into temporary tables by hashing their join fields,
+	 * repartitioning any partition pair where neither side fits in the available
+	 * buffers (up to MAX_LEVEL levels), and returns a scan that joins the partition pairs.
+	 * @see simpledb.plan.Plan#open()
+	 */
 	public Scan open() {
 		// Open the input first: if it is another join, it pins buffers
 		// when opened, so only count what is left afterwards
@@ -201,6 +207,12 @@ public class HashJoinPlan implements Plan {
 		return (int) Math.min(Integer.MAX_VALUE, C1 + C2 + 2L * numPasses * (M + N));
 	}
 
+   /**
+    * Estimates the number of records in the join.
+    * Assuming uniform distribution, the formula is:
+    * <pre> R(join(r,s)) = R(r)*R(s)/max{V(r,F1),V(s,F2)}</pre>
+    * @see simpledb.plan.Plan#recordsOutput()
+    */
    public int recordsOutput() {
 	    int maxvals = Math.max(this.r.distinctValues(field1),
 	                           this.s.distinctValues(field2));
@@ -212,6 +224,12 @@ public class HashJoinPlan implements Plan {
 	   return this.schema;
    }
    
+   /**
+    * Estimates the distinct number of field values in the join:
+    * the smaller of the two inputs' values for the join field,
+    * otherwise the input's value capped by the number of output records.
+    * @see simpledb.plan.Plan#distinctValues(java.lang.String)
+    */
    public int distinctValues(String fldname) {
       // V(U,A) = min(V(R1,A), V(R2,A)) for the
       // join column A, and V(U,B) = min(||U||, V(R1,B)) for any other column B
@@ -220,10 +238,18 @@ public class HashJoinPlan implements Plan {
       return Math.max(1, Math.min(recordsOutput(), r.schema().hasField(fldname) ? r.distinctValues(fldname) : s.distinctValues(fldname)));
    }
 
+   /**
+    * Describes this hash join as a step of the printed query plan.
+    * @see simpledb.plan.Plan#describe(java.util.List)
+    */
    public String describe(List<String> inputs) {
       return "Hash Join: join " + inputs.get(0) + " and " + inputs.get(1) + " on " + field1 + " = " + field2;
    }
 
+   /**
+    * Returns the input plans of this hash join, for printing the query plan.
+    * @see simpledb.plan.Plan#children()
+    */
    public List<Plan> children() {
       return Arrays.asList(r, s);
    }

@@ -110,11 +110,19 @@ public class MergeJoinPlan implements Plan {
       return sch;
    }
 
+   /**
+    * Describes this sort-merge join as a step of the printed query plan.
+    * @see simpledb.plan.Plan#describe(java.util.List)
+    */
    public String describe(List<String> inputs) {
       return "Sort-Merge Join: sort " + inputs.get(0) + " and " + inputs.get(1)
             + ", then merge them on " + fldname1 + " = " + fldname2;
    }
 
+   /**
+    * Returns the input plans of this sort-merge join, for printing the query plan.
+    * @see simpledb.plan.Plan#children()
+    */
    public List<Plan> children() {
       return Arrays.asList(unsorted1, unsorted2);
    }
