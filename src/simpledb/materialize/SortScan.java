@@ -18,9 +18,6 @@ public class SortScan implements Scan {
    private RecordComparator comp;
    private boolean hasmore1, hasmore2=false;
    private List<RID> savedposition;
-   // also saved since a run can end inside the group being repeated
-   private boolean savedhasmore1, savedhasmore2;
-   private UpdateScan savedcurrent;
    
    /**
     * Create a sort scan, given a list of 1 or 2 runs.
@@ -139,9 +136,6 @@ public class SortScan implements Scan {
       RID rid1 = s1.getRid();
       RID rid2 = (s2 == null) ? null : s2.getRid();
       savedposition = Arrays.asList(rid1,rid2);
-      savedhasmore1 = hasmore1;
-      savedhasmore2 = hasmore2;
-      savedcurrent = currentscan;
    }
    
    /**
@@ -153,8 +147,5 @@ public class SortScan implements Scan {
       s1.moveToRid(rid1);
       if (rid2 != null)
          s2.moveToRid(rid2);
-      hasmore1 = savedhasmore1;
-      hasmore2 = savedhasmore2;
-      currentscan = savedcurrent;
    }
 }
