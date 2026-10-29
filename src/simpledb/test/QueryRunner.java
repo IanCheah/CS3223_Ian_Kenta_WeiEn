@@ -17,7 +17,7 @@ import simpledb.tx.Transaction;
  */
 public class QueryRunner {
    public static void main(String[] args) {
-      SimpleDB db = new SimpleDB("studentdb");
+      SimpleDB db = new SimpleDB("demodb_no_index");
       Scanner sc = new Scanner(System.in);
       System.out.println("SimpleDB query runner. Enter SQL, or a blank line to quit.");
       System.out.print("SQL> ");
@@ -45,6 +45,7 @@ public class QueryRunner {
    }
 
    private static void doQuery(SimpleDB db, Transaction tx, String qry) {
+      long start = System.currentTimeMillis();
       Plan p = db.planner().createQueryPlan(qry, tx);
       Schema sch = p.schema();
       List<String> flds = sch.fields();
@@ -65,6 +66,8 @@ public class QueryRunner {
          count++;
       }
       s.close();
+      long end = System.currentTimeMillis();
       System.out.println("(" + count + " rows)");
+      System.out.println("Time taken: " + (end - start) + " ms");
    }
 }
